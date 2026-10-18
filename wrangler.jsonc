@@ -1,0 +1,70 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "hiobuy-forwarding",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./server/index.ts",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/agents/*"]
+  },
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ForwardingAssistant", "class_name": "ForwardingAssistant" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ForwardingAssistant"] }],
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "DEMO_MODE": "false",
+    "PUBLIC_SITE_MODE": "integrated"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hiobuy-forwarding",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "hiobuy-forwarding-photos" }],
+  "env": {
+    "production": {
+      "name": "hiobuy-forwarding",
+      "routes": [{ "pattern": "forwarding.demo.hiobuy.com", "custom_domain": true }],
+      "workers_dev": false,
+      "vars": {
+        "ENVIRONMENT": "production",
+        "DEMO_MODE": "false",
+        "PUBLIC_SITE_MODE": "integrated"
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "ForwardingAssistant", "class_name": "ForwardingAssistant" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ForwardingAssistant"] }],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "hiobuy-forwarding",
+          "database_id": "2d152eca-5c78-41c9-a975-4c66ddce684d",
+          "migrations_dir": "drizzle"
+        }
+      ],
+      "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "hiobuy-forwarding-photos" }]
+    }
+  }
+}

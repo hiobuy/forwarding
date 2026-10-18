@@ -1,0 +1,30 @@
+export const warehouseProfile = {
+  id: "wh_shenzhen",
+  name: "Shenzhen Warehouse",
+  phone: "+86 755 8600 1023",
+  province: "Guangdong",
+  city: "Shenzhen",
+  district: "Longgang District",
+  street: "No. 88 Logistics Avenue, HIOBuy Warehouse",
+  postalCode: "518000",
+  country: "China",
+  hours: "Monday–Saturday, 09:00–18:00 CST",
+  freeStorageDays: 30,
+  receivingRules: [
+    "Include your member code in the recipient name.",
+    "One domestic tracking number should match one parcel.",
+    "Remove or declare batteries, liquids, magnets, and powders before shipping.",
+  ],
+  prohibitedItems: [
+    "Flammable or explosive goods",
+    "Live animals and perishable food",
+    "Weapons and ammunition",
+    "Counterfeit goods",
+    "Undeclared batteries, liquids, or powders",
+  ],
+  inboundNotes: [
+    "Parcels without a member code may wait in Claim Packages until you confirm ownership.",
+    "Add the package with its domestic tracking number before the parcel arrives.",
+    "Free storage is 30 days from the warehouse received date.",
+  ],
+};

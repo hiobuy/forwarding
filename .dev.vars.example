@@ -1,0 +1,48 @@
+# Local only. Copy to .dev.vars. Never commit the real file.
+# In production, set secrets with `wrangler secret put NAME` instead.
+# Generate a secret with: openssl rand -base64 32
+BETTER_AUTH_SECRET=replace-with-a-long-random-string
+
+# Bootstrap only. While no staff owner exists, a signed-in user whose email is in this
+# comma-separated list becomes an owner. After that, Settings → Team decides admin access.
+ADMIN_EMAILS=you@example.com
+
+# Optional fallback HioBuy API key. A key saved in Settings → Integration wins over this one.
+# HIOBUY_API_TOKEN=
+
+# Public site. integrated (default) keeps the built-in homepage and calculator.
+# app-only sends / to the customer dashboard or login. Independent of DEMO_MODE.
+# PUBLIC_SITE_MODE=integrated
+# External marketing site for the logo, return link, and email footer. Do not hardcode a product domain.
+# PUBLIC_WEBSITE_URL=https://example.com
+
+# Deployment defaults. A business profile saved in Settings → Business overrides them.
+# APP_URL=http://localhost:5173
+# BUSINESS_NAME=
+# BUSINESS_EMAIL=
+# Extra origins, comma-separated, that Settings → Business may save as the app URL.
+# TRUSTED_APP_ORIGINS=https://app.example.com
+
+# Demo Admin is closed unless this is exactly true. Production must stay false.
+# DEMO_MODE=true
+# Optional override. Unset uses https://github.com/hiobuy/forwarding.
+# GITHUB_REPO_URL=https://github.com/hiobuy/forwarding
+
+# Optional SMTP. These override Settings → Email. Leave unset to configure SMTP in the admin.
+# SMTP_HOST=smtp.example.com
+# SMTP_PORT=587
+# SMTP_ENCRYPTION=starttls
+# SMTP_USERNAME=
+# SMTP_PASSWORD=
+# SMTP_FROM_EMAIL=noreply@example.com
+# SMTP_FROM_NAME=HIOBuy
+# SMTP_REPLY_TO=support@example.com
+
+# Optional customer sign-in protection. Each pair must be set together and overrides Settings → Advanced.
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# TURNSTILE_SITE_KEY=
+# TURNSTILE_SECRET_KEY=
+
+# true or false locks the customer assistant switch in Settings → Advanced.
+# CUSTOMER_AI_ENABLED=

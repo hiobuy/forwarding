@@ -1,0 +1,44 @@
+# Dependencies and build output
+node_modules
+dist
+.vite
+*.tsbuildinfo
+coverage
+
+# Cloudflare local state (local D1, R2, Durable Objects)
+.wrangler
+
+# Local secrets. Only the example files are committed.
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Local databases, dumps, and backups
+*.sqlite
+*.sqlite3
+*.db
+*.bundle
+*.dump
+*.bak
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and OS
+.DS_Store
+.idea
+*.swp
+*~
+
+# Migrations are part of the release. Some global ignore files exclude *.sql.
+!drizzle/*.sql
+
+# Keep this file tracked even when a global ignore lists it.
+!.gitignore
