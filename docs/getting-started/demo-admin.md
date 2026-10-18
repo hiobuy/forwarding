@@ -40,8 +40,8 @@ When the mode is off the body is `{ "data": { "enabled": false, "githubUrl": nul
 | Visitor | What they see |
 | --- | --- |
 | Signed-out visitor on the public calculator | **Try Admin Demo**, which goes to `/auth/login?next=/admin/demo` |
-| Signed-in customer, mode on | **Explore Admin Demo** on the customer dashboard, then `/admin/demo` |
-| Owner, manager, or support | No customer-dashboard button. They already have `/admin`. Opening `/admin/demo` still shows only the sample catalog |
+| Signed-in customer, mode on | **Admin demo** at the bottom of the sidebar on every page, and **Explore Admin Demo** on the dashboard. Both open `/admin/demo` |
+| Owner, manager, or support | No customer entry. The sidebar shows **Operations admin** instead. Opening `/admin/demo` still shows only the sample catalog |
 | Anyone, mode off | No buttons. `/admin/demo` says Demo Admin is off. Demo data routes return 404 |
 
 Login and registration keep a `next` value only for `/admin/demo` and `/auth/invite`.

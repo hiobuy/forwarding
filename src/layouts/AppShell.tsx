@@ -5,6 +5,7 @@ import {
   Boxes,
   Calculator,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   MapPin,
   Menu,
@@ -79,7 +80,7 @@ export function AppShell() {
     queryFn: () => api<{ id: string; title: string; body: string; href: string | null; read: boolean; createdAt: string }[]>("/api/notifications"),
   });
   const unread = notes.data?.filter((item) => !item.read).length ?? 0;
-  const me = useQuery({ queryKey: ["me"], queryFn: () => api<{ isAdmin?: boolean }>("/api/me") });
+  const me = useQuery({ queryKey: ["me"], queryFn: () => api<{ isAdmin?: boolean; demoMode?: boolean }>("/api/me") });
   const name = session?.user.name ?? "";
   const initial = name.trim().charAt(0).toUpperCase() || "H";
   const brand = useBrand();
@@ -198,6 +199,21 @@ export function AppShell() {
             >
               <ShieldCheck size={16} aria-hidden="true" />
               <span className={compact ? "sr-only" : ""}>Operations admin</span>
+            </NavLink>
+          </div>
+        ) : me.data?.demoMode ? (
+          <div className="px-2.5 pb-2">
+            <NavLink
+              to="/admin/demo"
+              onClick={onNavigate}
+              title={compact ? "Admin demo" : undefined}
+              className={`flex items-center gap-2.5 rounded-lg border border-indigo-400/25 bg-indigo-400/10 text-[13px] text-indigo-100 transition-colors hover:bg-indigo-400/15 ${compact ? "justify-center px-2 py-2.5" : "px-2.5 py-2"}`}
+            >
+              <LayoutGrid size={16} aria-hidden="true" />
+              <span className={compact ? "sr-only" : "flex min-w-0 flex-1 items-center justify-between gap-2"}>
+                <span className="truncate">Admin demo</span>
+                <span className="rounded bg-indigo-400/20 px-1.5 text-[10px] font-medium uppercase tracking-wide text-indigo-200">Read-only</span>
+              </span>
             </NavLink>
           </div>
         ) : null}
