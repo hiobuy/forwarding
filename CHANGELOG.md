@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- An "Admin demo" entry in the customer sidebar while `DEMO_MODE` is on.
+
+### Changed
+
+- `DEMO_MODE` is no longer set in `wrangler.jsonc`, so a deployment can turn it on with `wrangler secret put DEMO_MODE`.
+
+### Security
+
+- The HioBuy API key saved in Settings → Integration is now encrypted at rest with AES-GCM. Keys saved earlier are encrypted automatically the first time they are used.
+
 ## [1.0.0] - 2026-10-18
 
 Initial public release of HioBuy Forwarding.
@@ -33,4 +47,5 @@ Initial public release of HioBuy Forwarding.
 - Database migrations were squashed into `drizzle/0000_baseline.sql`. Databases created from earlier development builds must be recreated.
 - Customer value-added service requests are not available yet, because the HioBuy warehouse does not offer them.
 
+[Unreleased]: https://github.com/hiobuy/forwarding/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/hiobuy/forwarding/releases/tag/v1.0.0

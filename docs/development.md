@@ -179,7 +179,7 @@ Put your email in `ADMIN_EMAILS`, restart, sign in with it, and open `/admin`. Y
 
 Settings notes:
 
-- The API key is stored in `freight_policy.api_key` and only its last four characters are returned. `HIOBUY_API_TOKEN` is the fallback.
+- The API key is encrypted with `BETTER_AUTH_SECRET` in `freight_policy.api_key`, and only its last four characters are returned. `HIOBUY_API_TOKEN` is the fallback. After rotating `BETTER_AUTH_SECRET`, save the key again.
 - Destination switches are local. A country sync keeps existing switches.
 - Pricing is one markup percentage, one fixed CNY amount, and one exchange rate for every channel.
 - HioBuy Wallet is read-only.

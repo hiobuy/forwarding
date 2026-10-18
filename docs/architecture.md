@@ -80,7 +80,7 @@ Schema changes add a new `drizzle/` migration. Never edit SQL that has already b
 ## Security
 
 - `BETTER_AUTH_SECRET`, `HIOBUY_API_TOKEN`, and SMTP, Google, or Turnstile secrets belong in `.dev.vars` locally and `wrangler secret` in production.
-- The SMTP password, Stripe secret and webhook secret, Google client secret, Turnstile secret, and HioBuy webhook signing secret saved from the admin are stored in D1 with AES-GCM, keyed from `BETTER_AUTH_SECRET`. Rotating `BETTER_AUTH_SECRET` means saving them again.
-- The HioBuy API key saved in Settings → Integration is stored in `freight_policy.api_key` without encryption. The API only returns its last four characters. Treat D1 access as access to that key, or use `HIOBUY_API_TOKEN` as a Worker secret instead.
+- The HioBuy API key, SMTP password, Stripe secret and webhook secret, Google client secret, Turnstile secret, and HioBuy webhook signing secret saved from the admin are stored in D1 with AES-GCM, keyed from `BETTER_AUTH_SECRET`. Rotating `BETTER_AUTH_SECRET` means saving them again.
+- The HioBuy API key is stored as `enc:v1:<last four>:<ciphertext>` in `freight_policy.api_key` (`server/api-key-seal.ts`). The API only returns the last four characters. A key saved before encryption existed is sealed the first time it is read. If the key cannot be decrypted, the app logs an error and falls back to `HIOBUY_API_TOKEN`.
 - Logs may contain a request id. Do not log passwords, sessions, full API keys, or payment credentials. Sync attempts pass through `redactSensitive` first.
 - Stripe and HioBuy webhooks are verified by signature. Replayed event ids are not applied twice.

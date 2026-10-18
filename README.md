@@ -269,7 +269,6 @@ Please report vulnerabilities privately to support@hiobuy.com rather than in a p
 - The HioBuy fulfillment wallet is read-only here. Top it up in the HioBuy portal.
 - The HioBuy webhook covers the main package and shipment events. It does not replace a manual pull.
 - The built-in quote rate limit is per Worker isolate, not a global quota.
-- The HioBuy API key saved from the admin is stored unencrypted in D1. Prefer the `HIOBUY_API_TOKEN` secret if that matters to you.
 
 ## License
 

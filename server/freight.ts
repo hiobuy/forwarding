@@ -1,4 +1,5 @@
-import { eq, inArray } from "drizzle-orm";
+import { env } from "cloudflare:workers";
+import { and, eq, inArray } from "drizzle-orm";
 import { countryName, dialFor } from "../src/domain/countries";
 import { DEFAULT_SELLING_POLICY, type SellingPolicy, type SyncedDestination } from "../src/domain/freight";
 import { TRACKING_EVENT_CODES, resolveTrackingLabels } from "../src/domain/tracking-events";
@@ -6,7 +7,8 @@ import { warehouseProfile } from "../src/mocks/warehouse";
 import type { Database } from "./db/client";
 import { SINGLETON_ID, singletonRow } from "./db/singleton";
 import { freightAreas, freightPolicy, warehouseLocations } from "./db/schema";
-import { AppError } from "./errors";
+import { apiKeyHint, isSealedApiKey, openApiKey, sealApiKey } from "./api-key-seal";
+import { AppError, logEvent } from "./errors";
 import { fetchHioBuyChannelDestinations } from "./services/hiobuy/channels";
 import { fetchHioBuyWarehouse } from "./services/hiobuy/locations";
 
@@ -68,8 +70,22 @@ async function mergeAreas(db: Database, incoming: SyncedDestination[]) {
   };
 }
 
+/** The key saved in Settings → Integration, else HIOBUY_API_TOKEN. A key saved before encryption is sealed on first use. */
 export async function resolveHioBuyToken(db: Database, envToken: string | undefined) {
-  return (await freightPolicyRow(db)).apiKey?.trim() || envToken?.trim() || undefined;
+  const stored = (await freightPolicyRow(db)).apiKey?.trim();
+  if (stored) {
+    const secret = env.BETTER_AUTH_SECRET;
+    const token = await openApiKey(secret, stored);
+    if (token && secret && !isSealedApiKey(stored)) {
+      await db
+        .update(freightPolicy)
+        .set({ apiKey: await sealApiKey(secret, token) })
+        .where(and(eq(freightPolicy.id, SINGLETON_ID), eq(freightPolicy.apiKey, stored)));
+    }
+    if (token) return token;
+    logEvent({ level: "error", message: "Saved HioBuy API key could not be decrypted", detail: "BETTER_AUTH_SECRET changed? Save the key again in Settings → Integration." });
+  }
+  return envToken?.trim() || undefined;
 }
 
 export async function fulfillmentConnected(db: Database) {
@@ -111,12 +127,6 @@ export async function sellingPolicy(db: Database): Promise<SellingPolicy> {
   return { markupBps: policy.markupBps, markupCnyFen: policy.markupCnyFen, cnyPerUsdE4: policy.cnyPerUsdE4 };
 }
 
-function keyHint(apiKey: string | null) {
-  if (!apiKey) return null;
-  const tail = apiKey.slice(-4);
-  return `••••${tail}`;
-}
-
 function readDestinations(raw: string | null | undefined): string[] {
   if (!raw) return [];
   try {
@@ -137,7 +147,7 @@ export async function settingsView(db: Database) {
     ? countryCodes.map((code) => ({ code, name: countryName(code), enabled: areas.some((row) => row.countryCode === code && row.enabled) }))
     : [];
   return {
-    connection: { configured: Boolean(policy.apiKey), hint: keyHint(policy.apiKey) },
+    connection: { configured: Boolean(policy.apiKey), hint: apiKeyHint(policy.apiKey) },
     connected: live,
     sync: { source: policy.syncSource, syncedAt: policy.syncedAt ? new Date(policy.syncedAt).toISOString() : null },
     warehouse: warehouse
@@ -173,7 +183,10 @@ export async function saveApiKey(db: Database, apiKey: string | null) {
   await freightPolicyRow(db);
   const trimmed = apiKey?.trim() ?? "";
   if (trimmed && trimmed.length < 8) throw new AppError("VALIDATION_ERROR", "The API key looks too short.");
-  await db.update(freightPolicy).set({ apiKey: trimmed || null, updatedAt: Date.now() }).where(eq(freightPolicy.id, SINGLETON_ID));
+  const secret = env.BETTER_AUTH_SECRET;
+  if (trimmed && !secret) throw new AppError("CONFIG_ERROR", "BETTER_AUTH_SECRET is not set, so the key cannot be stored safely.", 500);
+  const stored = trimmed ? await sealApiKey(secret, trimmed) : null;
+  await db.update(freightPolicy).set({ apiKey: stored, updatedAt: Date.now() }).where(eq(freightPolicy.id, SINGLETON_ID));
   return settingsView(db);
 }
 

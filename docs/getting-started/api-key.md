@@ -2,7 +2,7 @@
 
 > Status: Implemented
 
-The API key stays in the Worker. Settings responses return only the last 4 characters. React never stores or concatenates the full key.
+The API key stays in the Worker. It is stored encrypted with `BETTER_AUTH_SECRET` (AES-GCM), and Settings responses return only the last 4 characters. React never stores or concatenates the full key. After rotating `BETTER_AUTH_SECRET`, save the key again; until then the app falls back to `HIOBUY_API_TOKEN`.
 
 ## Save order
 
@@ -33,7 +33,8 @@ The warehouse developer code is bound in the portal. It is not stored in this da
 
 ## Code
 
-- `connectHioBuy`, `verifyHioBuyAccess`, `saveApiKey` in `server/freight.ts`
+- `connectHioBuy`, `verifyHioBuyAccess`, `saveApiKey`, `resolveHioBuyToken` in `server/freight.ts`
+- Key encryption: `server/api-key-seal.ts`
 - `server/services/hiobuy/locations.ts`
 - `server/services/hiobuy/channels.ts`
 - Settings page: `src/features/admin/AdminSettings.tsx`
