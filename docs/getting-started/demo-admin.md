@@ -18,7 +18,14 @@ GITHUB_REPO_URL=https://github.com/hiobuy/forwarding
 
 `GITHUB_REPO_URL` is used only when it matches `https://github.com/owner/repo`. A trailing slash is removed. An invalid value is ignored. When the variable is unset, the link is `https://github.com/hiobuy/forwarding`.
 
-`wrangler.jsonc` sets `DEMO_MODE` to `"false"` for the default environment and for `env.production`. Local overrides go in `.dev.vars`, which is not committed. See `.dev.vars.example`.
+`wrangler.jsonc` does not set `DEMO_MODE`, so it is off unless you turn it on. Locally, put it in `.dev.vars`, which is not committed. See `.dev.vars.example`. On a deployed Worker, use a secret so the switch stays out of the repository:
+
+```bash
+npx wrangler secret put DEMO_MODE --env production   # enter: true
+npx wrangler secret delete DEMO_MODE --env production # turn it off again
+```
+
+Do not also add `DEMO_MODE` to `vars` in `wrangler.jsonc`. Cloudflare rejects a secret whose name is already used by a variable.
 
 After changing the variable, restart `npm run dev`. Check the public status route:
 
@@ -114,7 +121,7 @@ Disabled controls use a short label such as `Not saved in demo` or `HioBuy sync 
 | `src/lib/api.ts` | Rewrites admin API calls only while the demo shell is mounted |
 | `src/features/admin/AdminShell.tsx` | Demo route guard, banner, and link prefix |
 | `src/App.tsx` | Mounts the same admin pages at `/admin` and `/admin/demo` |
-| `wrangler.jsonc` | `DEMO_MODE` defaults to `"false"`, including production |
+| `wrangler.jsonc` | Does not set `DEMO_MODE`. Unset means off |
 
 ## Checks
 

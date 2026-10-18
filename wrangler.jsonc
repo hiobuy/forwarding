@@ -27,7 +27,6 @@
   },
   "vars": {
     "ENVIRONMENT": "development",
-    "DEMO_MODE": "false",
     "PUBLIC_SITE_MODE": "integrated"
   },
   "d1_databases": [
@@ -46,7 +45,6 @@
       "workers_dev": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "DEMO_MODE": "false",
         "PUBLIC_SITE_MODE": "integrated"
       },
       "ai": {

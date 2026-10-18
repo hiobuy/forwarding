@@ -70,7 +70,7 @@ HioBuy Forwarding is a customer business platform. It is **not** a warehouse man
 
 The public demo runs at **https://forwarding.demo.hiobuy.com**. You can browse the public website, use the shipping calculator, and register a customer account.
 
-The read-only Demo Admin at `/admin/demo` is only available when the deployment sets `DEMO_MODE=true`. It is currently turned off on the public demo. When it is on, it shows sample data, sends no real email, and refuses HioBuy Pay.
+The public demo runs with `DEMO_MODE=true`, so any signed-in user can open the read-only Demo Admin at `/admin/demo`. It shows a fixed sample catalog. In demo mode the deployment sends no email, the calculator returns sample prices, and HioBuy Pay is refused. Email sign-up therefore cannot be verified on the demo; Google sign-in works when it is configured.
 
 Balances, prices, and transactions on the demo are not real financial or logistics records. Do not send real parcels to an address shown on the demo unless you have an agreement with HioBuy.
 
@@ -183,7 +183,7 @@ Local values live in `.dev.vars`, which is ignored by Git. Production secrets ar
 | `HIOBUY_API_TOKEN` | No | Fallback HioBuy key. A key saved in Settings → Integration wins |
 | `PUBLIC_SITE_MODE` | No | `integrated` (default) or `app-only` |
 | `PUBLIC_WEBSITE_URL` | No | External marketing site for the logo, return link, and email footer |
-| `DEMO_MODE` | No | `true` opens the read-only Demo Admin. Keep `false` for a real business |
+| `DEMO_MODE` | No | `true` opens the read-only Demo Admin and turns off email, live quotes, and HioBuy Pay. Leave unset for a real business. Set it with `wrangler secret put`, not in `wrangler.jsonc` |
 | `SMTP_*` | No | Override Settings → Email |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | No | Override Google sign-in in Settings → Advanced |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | No | Override Turnstile in Settings → Advanced |
