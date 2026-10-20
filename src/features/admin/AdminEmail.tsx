@@ -189,7 +189,7 @@ function TemplateEditor() {
             <h2 className="text-[13px] font-semibold">{current.name}</h2>
             <Button type="button" variant="ghost" size="sm" loading={reset.isPending} disabled={demo} onClick={() => reset.mutate()}>Restore default</Button>
           </div>
-          <p className="text-[12px] text-slate-500">Variables: {current.variables.map((item) => `{{${item}}}`).join(", ")}</p>
+          <p className="text-[12px] text-slate-500">Variables: {current.variables.map((item) => `{{${item}}}`).join(", ")}. A link can carry a button label, for example {`{{verification_url:Verify email}}`}.</p>
           <Field label="Subject"><input className={inputClass} value={shownSubject} onChange={(event) => { setSubject(event.target.value); setDirty(true); }} /></Field>
           <Field label="Body"><textarea className={cn(inputClass, "h-40 py-2")} value={shownBody} onChange={(event) => { setBody(event.target.value); setDirty(true); }} /></Field>
           <div className="flex flex-wrap gap-2">

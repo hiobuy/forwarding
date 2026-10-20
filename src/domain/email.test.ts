@@ -28,7 +28,32 @@ describe("email templates", () => {
       appUrl: null,
     });
     expect(rendered.html).toContain('href="https://example.com/auth/verify-email?token=abc"');
+    expect(rendered.html).toContain(">View details</a>");
+    expect(rendered.html).not.toMatch(/<a[^>]*>https:/);
     expect(escapeHtml(`a&b`)).toBe("a&amp;b");
+  });
+
+  it("uses the label after a colon as the button text", () => {
+    const rendered = renderTemplate({
+      subject: "Verify",
+      body: "{{verification_url:Verify email}}",
+      vars: { verification_url: "https://example.com/auth/verify-email?token=abc" },
+      platformName: "HIOBuy",
+      logoUrl: null,
+      appUrl: null,
+    });
+    expect(rendered.html).toContain(">Verify email</a>");
+    expect(rendered.text).toContain("Verify email\nhttps://example.com/auth/verify-email?token=abc");
+    const hostile = renderTemplate({
+      subject: "Verify",
+      body: "{{verification_url:<b>x</b>}}",
+      vars: { verification_url: "https://example.com/go" },
+      platformName: "HIOBuy",
+      logoUrl: null,
+      appUrl: null,
+    });
+    expect(hostile.html).toContain("&lt;b&gt;x&lt;/b&gt;");
+    expect(hostile.html).not.toContain("<b>x</b>");
   });
 
   it("does not fill variables outside the allowlist", () => {

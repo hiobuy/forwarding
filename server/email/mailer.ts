@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, like, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, like, lte, notInArray, sql } from "drizzle-orm";
 import { BUSINESS_EMAIL_EVENTS, EMAIL_TEMPLATES, defaultTemplate, isTemplateId, renderTemplate, smtpHostProblem, templateProblem, type EmailTemplateId } from "../../src/domain/email";
 import type { BusinessEnv } from "../../src/domain/business";
 import { emailBrand } from "../business";
@@ -12,6 +12,8 @@ import { sendSmtp, testSmtp, type SmtpConfig, type SmtpEncryption } from "./smtp
 const TEST_LIMIT = 5;
 const TEST_WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
+/** Without these a demo visitor could never verify, reset, or change an email. */
+const DEMO_ACCOUNT_EVENTS = ["email.verification", "email.change", "email.changed", "password.reset"];
 
 type MailEnv = {
   BETTER_AUTH_SECRET: string;
@@ -327,11 +329,18 @@ export async function drainEmailQueue(db: Database, env: MailEnv) {
 }
 
 async function deliverQueued(db: Database, env: MailEnv, config: SmtpConfig) {
-  if (env.DEMO_MODE === "true") {
-    await db.update(emailMessages).set({ status: "failed", lastError: "Demo mode does not send email." }).where(eq(emailMessages.status, "queued"));
-    return;
+  const demo = env.DEMO_MODE === "true";
+  if (demo) {
+    await db
+      .update(emailMessages)
+      .set({ status: "failed", lastError: "Demo mode only sends account emails." })
+      .where(and(eq(emailMessages.status, "queued"), notInArray(emailMessages.event, DEMO_ACCOUNT_EVENTS)));
   }
-  const rows = await db.select().from(emailMessages).where(and(eq(emailMessages.status, "queued"), sql`${emailMessages.attempts} < ${MAX_ATTEMPTS}`)).limit(8);
+  const rows = await db
+    .select()
+    .from(emailMessages)
+    .where(and(eq(emailMessages.status, "queued"), sql`${emailMessages.attempts} < ${MAX_ATTEMPTS}`, demo ? inArray(emailMessages.event, DEMO_ACCOUNT_EVENTS) : undefined))
+    .limit(8);
   for (const row of rows) {
     const claimed = await db
       .update(emailMessages)

@@ -6,7 +6,7 @@ import { Ms } from "../site/icon";
 import { Checkbox } from "../../components/ui/checkbox";
 import { api } from "../../lib/api";
 import { useBrand, usePageTitle } from "../../lib/brand";
-import { authClient } from "../../lib/auth";
+import { authClient, googleErrorMessage } from "../../lib/auth";
 import { authHeaders, TurnstileField } from "./TurnstileField";
 
 function AuthFrame({
@@ -49,7 +49,7 @@ function GoogleButton({ callbackURL }: { callbackURL: string }) {
         onClick={() => {
           setPending(true);
           setError("");
-          void authClient.signIn.social({ provider: "google", callbackURL }).then((result) => {
+          void authClient.signIn.social({ provider: "google", callbackURL, errorCallbackURL: "/auth/login" }).then((result) => {
             if (result.error) {
               setPending(false);
               setError(result.error.message ?? "Google sign-in did not start.");
@@ -161,6 +161,7 @@ export function LoginPage() {
         <>
           <form className="space-y-5" onSubmit={(event) => void onSubmit(event)}>
             {params.get("reset") ? <Notice tone="success">Password updated. Sign in with the new one.</Notice> : null}
+            {googleErrorMessage(params.get("error")) ? <Notice tone="danger">{googleErrorMessage(params.get("error"))}</Notice> : null}
             <label className="block text-sm font-semibold text-slate-700" htmlFor="login-email">
               Email address
               <span className="relative mt-1.5 block">

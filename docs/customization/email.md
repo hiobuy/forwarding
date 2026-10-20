@@ -10,7 +10,7 @@ Templates are a fixed list in `src/domain/email.ts`. Settings → Email edits su
 
 `verification`, `verify_new_email`, and `password_reset` must keep `{{actionUrl}}` or `{{verification_url}}`. Saving a body without that link is rejected.
 
-Placeholders are a whitelist. Unknown names such as `{{password}}` stay literal. Allowed names include `customer_name`, `business_name`, `verification_url`, `support_email`, `expiration_minutes`, `package_number`, `shipment_number`, and `action_url`, plus the older `name`, `platformName`, `detail`, and `actionUrl`. `name` and `customer_name` fill the same value. `actionUrl` and `verification_url` both become the same http(s) link. `actionUrl` and `logoUrl` pass through `safeHttpUrl`.
+Placeholders are a whitelist. Unknown names such as `{{password}}` stay literal. Allowed names include `customer_name`, `business_name`, `verification_url`, `support_email`, `expiration_minutes`, `package_number`, `shipment_number`, and `action_url`, plus the older `name`, `platformName`, `detail`, and `actionUrl`. `name` and `customer_name` fill the same value. `actionUrl` and `verification_url` both become the same http(s) link. Add a label after a colon, such as `{{verification_url:Verify email}}`, and the HTML mail shows that text on a button, with the full address in small type underneath. Without a label the button says "Confirm email" or "View details". The label is escaped and limited to 40 characters. `actionUrl` and `logoUrl` pass through `safeHttpUrl`.
 
 Business events map to those ids in `BUSINESS_EMAIL_EVENTS`. Customer notification preferences can suppress a business mail. Welcome, verification, password reset, new-email verification, and the old-address notice are not optional. Welcome goes out once, after the customer verifies the address. A Google sign-up is already verified, so it gets the welcome right away. The email-change flow is in [Advanced settings](advanced-settings.md).
 
@@ -26,7 +26,7 @@ Messages go through `email_messages` (`queued`, `sending`, `sent`, `failed`). Ea
 
 The log label Accepted means the SMTP server accepted the message. It does not mean the inbox delivered it.
 
-`DEMO_MODE=true` does not open SMTP. Queued rows are marked failed with "Demo mode does not send email."
+`DEMO_MODE=true` only sends account emails: `email.verification`, `email.change`, `email.changed`, and `password.reset`. Any other queued row is marked failed with "Demo mode only sends account emails."
 
 ## Compatibility
 

@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { COUNTRIES } from "../../domain/countries";
 import { Button, Field, Notice, PageHeader, PasswordInput, inputClass } from "../../components/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { useToast } from "../../components/toast";
 import { ApiError, api } from "../../lib/api";
 import { useBrand } from "../../lib/brand";
-import { authClient } from "../../lib/auth";
+import { authClient, googleErrorMessage } from "../../lib/auth";
 
 type Preferences = {
   emailEnabled: boolean;
@@ -242,6 +242,8 @@ function EmailChange({ profile }: { profile: AccountMe }) {
     },
     onError: (reason) => toast({ title: reason instanceof ApiError ? reason.message : "Could not cancel.", tone: "danger" }),
   });
+  const [params] = useSearchParams();
+  const googleError = googleErrorMessage(params.get("error"));
   const unlink = useMutation({
     mutationFn: () => api("/api/me/google/unlink", { method: "POST", body: JSON.stringify({ password: unlinkPassword }) }),
     onSuccess: async () => {
@@ -285,7 +287,10 @@ function EmailChange({ profile }: { profile: AccountMe }) {
               <Button type="submit" variant="secondary" loading={unlink.isPending}>Unlink Google</Button>
             </form>
           ) : (
-            <Button type="button" variant="secondary" onClick={() => void authClient.linkSocial({ provider: "google", callbackURL: "/app/account" })}>Link Google</Button>
+            <>
+              {googleError ? <Notice tone="danger">{googleError}</Notice> : null}
+              <Button type="button" variant="secondary" onClick={() => void authClient.linkSocial({ provider: "google", callbackURL: "/app/account", errorCallbackURL: "/app/account" })}>Link Google</Button>
+            </>
           )}
         </div>
       ) : null}

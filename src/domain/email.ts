@@ -63,11 +63,11 @@ const DEFAULTS: Record<EmailTemplateId, { subject: string; body: string }> = {
   },
   verification: {
     subject: "Verify your {{business_name}} email",
-    body: "Hello {{customer_name}},\n\nConfirm this email address to start forwarding. This link expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url}}",
+    body: "Hello {{customer_name}},\n\nConfirm this email address to start forwarding. This link expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url:Verify email}}",
   },
   verify_new_email: {
     subject: "Confirm your new {{business_name}} email",
-    body: "Hello {{customer_name}},\n\nConfirm {{detail}} as your sign-in email. Until you open this link, your current email stays active. The link expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url}}",
+    body: "Hello {{customer_name}},\n\nConfirm {{detail}} as your sign-in email. Until you open this link, your current email stays active. The link expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url:Confirm new email}}",
   },
   email_changed: {
     subject: "Your {{business_name}} email was changed",
@@ -75,7 +75,7 @@ const DEFAULTS: Record<EmailTemplateId, { subject: string; body: string }> = {
   },
   password_reset: {
     subject: "Reset your {{business_name}} password",
-    body: "Hello {{customer_name}},\n\nUse this link to choose a new password. It expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url}}",
+    body: "Hello {{customer_name}},\n\nUse this link to choose a new password. It expires in {{expiration_minutes}} minutes and works once.\n\n{{verification_url:Reset password}}",
   },
   package_received: {
     subject: "Package {{package_number}} received",
@@ -122,7 +122,7 @@ const LINK_REQUIRED = new Set<EmailTemplateId>(["verification", "password_reset"
 
 export function templateProblem(id: string, body: string): string | null {
   if (!isTemplateId(id) || !LINK_REQUIRED.has(id)) return null;
-  if (/\{\{\s*(actionUrl|verification_url)\s*\}\}/.test(body)) return null;
+  if (/\{\{\s*(actionUrl|verification_url)(?:\s*:[^}]*)?\s*\}\}/.test(body)) return null;
   return "This email must include the verification link.";
 }
 
@@ -221,14 +221,23 @@ export function renderTemplate(input: {
 }
 
 function fill(source: string, vars: Record<string, string>, html: boolean, color: string) {
-  return source.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*\}\}/g, (match, key: string) => {
+  return source.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_]*)(?:\s*:\s*([^}]+?))?\s*\}\}/g, (match, key: string, label?: string) => {
     if (!(EMAIL_VARIABLES as readonly string[]).includes(key)) return match;
     const raw = vars[key] ?? "";
     if (key === "actionUrl" || key === "verification_url") {
       const url = safeHttpUrl(raw);
       if (!url) return "";
-      return html ? `<a href="${escapeHtml(url)}" style="display:inline-block;margin-top:16px;background:${color};color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px">${escapeHtml(url)}</a>` : url;
+      const text = buttonLabel(key, label);
+      if (!html) return `${text}\n${url}`;
+      // The HTML path already escaped the template, so the label is safe. The URL comes from variables and is escaped here.
+      return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 0"><tr><td style="border-radius:8px;background:${color}"><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;color:#ffffff;font-weight:600;font-size:14px;line-height:1.2;text-decoration:none">${text}</a></td></tr></table><div style="margin-top:10px;font-size:12px;line-height:1.5;color:#64748b;word-break:break-all">${escapeHtml(url)}</div>`;
     }
     return html ? escapeHtml(raw) : raw.replace(/[\r\n]+/g, "\n");
   });
+}
+
+function buttonLabel(key: string, label: string | undefined) {
+  const cleaned = (label ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 40);
+  if (cleaned) return cleaned;
+  return key === "verification_url" ? "Confirm email" : "View details";
 }

@@ -81,6 +81,7 @@ export async function createAuth(env: WorkerBindings, db: Database, request: Req
     },
     emailVerification: {
       sendOnSignUp: true,
+      sendOnSignIn: true,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60,
       sendVerificationEmail: async ({ user: account, url }) => {

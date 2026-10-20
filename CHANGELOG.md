@@ -11,6 +11,10 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - `DEMO_MODE` is no longer set in `wrangler.jsonc`, so a deployment can turn it on with `wrangler secret put DEMO_MODE`.
+- A failed Google sign-in or link now returns to the sign-in or Account page with a readable message instead of the raw Better Auth error page. For example, an email that already has a password account is told to sign in with the password first and then link Google under Account.
+- Demo mode now sends account emails (sign-up verification, password reset, and email change) so demo visitors can verify an email sign-up. Notification emails are still not sent.
+- Signing in to an unverified account with the right password now sends a fresh verification link.
+- Email links render as a short button. `{{verification_url:Verify email}}` sets the label; the full address stays underneath in small type.
 
 ### Security
 

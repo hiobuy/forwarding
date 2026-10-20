@@ -65,7 +65,7 @@ Optional, and empty unless you want them:
 | `TRUSTED_APP_ORIGINS` | Extra comma-separated origins that Settings → Business may save as the app URL |
 | `PUBLIC_SITE_MODE` | `integrated` (default) keeps the public website. `app-only` sends `/` to the dashboard or login. See [Public website deployment](public-site.md) |
 | `PUBLIC_WEBSITE_URL` | Logo, return link, and email footer. A saved business URL overrides it |
-| `DEMO_MODE` | `true` skips real SMTP and refuses HioBuy Pay. Independent of `PUBLIC_SITE_MODE` |
+| `DEMO_MODE` | `true` sends only account emails over SMTP and refuses HioBuy Pay. Independent of `PUBLIC_SITE_MODE` |
 | `SMTP_HOST` and the other SMTP variables | Override the password saved under Settings → Email |
 
 Numbering, Google, Turnstile, and the assistant switch are documented in [Advanced settings](../customization/advanced-settings.md).
