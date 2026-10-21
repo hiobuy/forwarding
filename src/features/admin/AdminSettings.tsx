@@ -4,7 +4,7 @@ import { customerUsdFen, formatCnyFen, formatPercentBps, formatRateE4, markedUpC
 import { DEFAULT_TRACKING_EVENT_LABELS, TRACKING_EVENT_CODES, type TrackingEventCode } from "../../domain/tracking-events";
 import { countryName } from "../../domain/countries";
 import { formatWarehouseLine, presentSchedule } from "../../domain/warehouse-location";
-import { formatFen } from "../../domain/money";
+import { useI18n } from "../../lib/i18n";
 import { useSearchParams } from "react-router";
 import { Button, ConfirmDialog, CopyButton, ErrorState, Field, LoadingBlock, inputClass } from "../../components/ui";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -20,6 +20,7 @@ import { HioBuyWallet } from "./HioBuyWallet";
 import { AdminBusiness } from "./AdminBusiness";
 import { AdminInvoicing } from "./AdminInvoicing";
 import { AdminAdvanced } from "./AdminAdvanced";
+import { AdminLocale } from "./AdminLocale";
 
 type Country = { code: string; name: string; enabled: boolean };
 type Settings = {
@@ -45,7 +46,7 @@ type Settings = {
   pricing: { markupBps: number; markupCnyFen: number; cnyPerUsdE4: number };
 };
 
-type Tab = "business" | "integration" | "destinations" | "pricing" | "wallet" | "email" | "payments" | "invoicing" | "tracking" | "team" | "advanced";
+type Tab = "business" | "language" | "integration" | "destinations" | "pricing" | "wallet" | "email" | "payments" | "invoicing" | "tracking" | "team" | "advanced";
 
 function TrackingLabels() {
   const query = useQuery({ queryKey: ["admin", "tracking-events"], queryFn: () => api<{ labels: Record<TrackingEventCode, string> }>("/api/admin/settings/tracking-events") });
@@ -105,6 +106,7 @@ function yuan(fen: number) {
 
 const tabs = [
   ["business", "Business", "settings.read"],
+  ["language", "Language", "settings.write"],
   ["integration", "Integration", "settings.read"],
   ["invoicing", "Invoice details", "settings.write"],
   ["destinations", "Destinations", "settings.write"],
@@ -130,7 +132,7 @@ export function AdminSettings() {
   return <SettingsScreen data={query.data} dirty={dirty} setDirty={setDirty} permissions={access.data?.permissions ?? []} demo={access.data?.role === "demo"} />;
 }
 
-const DEMO_TABS = new Set(["business", "integration", "destinations", "pricing", "wallet", "email", "advanced", "payments", "team"]);
+const DEMO_TABS = new Set(["business", "language", "integration", "destinations", "pricing", "wallet", "email", "advanced", "payments", "team"]);
 
 function SettingsScreen({ data, dirty, setDirty, permissions, demo }: { data: Settings; dirty: boolean; setDirty: (value: boolean) => void; permissions: string[]; demo: boolean }) {
   const [params, setParams] = useSearchParams();
@@ -167,6 +169,9 @@ function SettingsScreen({ data, dirty, setDirty, permissions, demo }: { data: Se
       </div>
       <div className={tab === "business" ? "" : "hidden"}>
         <AdminBusiness canWrite={canWriteBusiness} active={tab === "business"} onDirty={setDirty} />
+      </div>
+      <div className={tab === "language" ? "" : "hidden"}>
+        <AdminLocale active={tab === "language"} onDirty={setDirty} />
       </div>
       <div className={tab === "integration" ? "" : "hidden"}>
         <Integration data={data} canEditSecrets={canEditSecrets} />
@@ -535,6 +540,7 @@ function Destinations({ data }: { data: Settings }) {
 
 function Pricing({ data, active, onDirty }: { data: Settings; active: boolean; onDirty: (value: boolean) => void }) {
   const demo = useDemoPreview();
+  const { currency, format } = useI18n();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [percent, setPercent] = useState(formatPercentBps(data.pricing.markupBps));
@@ -565,12 +571,12 @@ function Pricing({ data, active, onDirty }: { data: Settings; active: boolean; o
     <form className="overflow-hidden rounded-lg border border-line bg-white" onSubmit={(event) => { event.preventDefault(); if (!demo) save.mutate(); }}>
       <div className="border-b border-slate-100 px-4 py-3">
         <h2 className="text-[13px] font-semibold">Markup and exchange rate</h2>
-        <p className="mt-1 text-[13px] text-slate-500">{demo ? "Adjust the sample markup to preview a price. Refresh restores the demo values. Nothing is saved." : "One rule for every channel. HioBuy prices in yuan. Customers pay dollars."}</p>
+        <p className="mt-1 text-[13px] text-slate-500">{demo ? "Adjust the sample markup to preview a price. Refresh restores the demo values. Nothing is saved." : `One rule for every channel. HioBuy prices in yuan. Customers pay in ${currency}. The rate is how many yuan equal 1 ${currency}.`}</p>
       </div>
       <div className="grid gap-3 px-4 py-4 sm:grid-cols-3">
         <Field label="Markup %"><input className={inputClass} inputMode="decimal" value={percent} onChange={(event) => setPercent(event.target.value)} /></Field>
         <Field label="Fixed markup (CNY)"><input className={inputClass} inputMode="decimal" value={fixed} onChange={(event) => setFixed(event.target.value)} /></Field>
-        <Field label="CNY per 1 USD"><input className={inputClass} inputMode="decimal" value={rate} onChange={(event) => setRate(event.target.value)} /></Field>
+        <Field label={`CNY per 1 ${currency}`}><input className={inputClass} inputMode="decimal" value={rate} onChange={(event) => setRate(event.target.value)} /></Field>
       </div>
       <div className="mx-4 mb-4 flex flex-wrap items-end justify-between gap-4 border-t border-slate-100 pt-4">
         <Field label="Preview cost (CNY)">
@@ -578,7 +584,7 @@ function Pricing({ data, active, onDirty }: { data: Settings; active: boolean; o
         </Field>
         <div className="pb-0.5 text-right">
           <div className="text-[12px] text-slate-500">Customer pays</div>
-          <div className="mt-0.5 text-[22px] leading-none font-semibold tracking-tight tabular-nums">{preview ? formatFen(preview.usdFen) : "—"}</div>
+          <div className="mt-0.5 text-[22px] leading-none font-semibold tracking-tight tabular-nums">{preview ? format(preview.usdFen) : "—"}</div>
           <div className="mt-1 text-[12px] text-slate-400">{preview ? `${formatCnyFen(preview.costFen)} → ${formatCnyFen(preview.sellFen)}` : "Enter a cost to preview."}</div>
         </div>
       </div>

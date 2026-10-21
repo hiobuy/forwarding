@@ -17,6 +17,7 @@ import { vasCatalog } from "../src/mocks/vas";
 import { customerReceivingLine } from "../src/domain/warehouse-location";
 import { warehouseProfile } from "../src/mocks/warehouse";
 import { appConfig, exceptionActions } from "./config";
+import { customerCurrency } from "./locale";
 import { liveShipmentRoutes } from "./calculator";
 import { customerWarehouse, fulfillmentConnected, listOpenDestinations } from "./freight";
 import { recognizeCheckoutPayment } from "./earnings";
@@ -966,6 +967,7 @@ export async function createShipment(
     addressLine1: fresh.address.addressLine1,
     addressLine2: fresh.address.addressLine2,
   });
+  const currency = await customerCurrency(db);
   await db.insert(shipmentMethods).values({
     shipmentId,
     routeCode: route.routeCode,
@@ -974,7 +976,7 @@ export async function createShipment(
     estimatedDaysMax: route.daysMax,
     estimatedMinFen: route.estimatedMinFen,
     estimatedMaxFen: route.estimatedMaxFen,
-    currency: appConfig.currency,
+    currency,
     description: route.description,
   });
   await db.insert(charges).values({
@@ -983,7 +985,7 @@ export async function createShipment(
     type: "FREIGHT",
     name: "Estimated freight",
     amountFen: route.estimatedMaxFen,
-    currency: appConfig.currency,
+    currency,
     status: "ESTIMATED",
   });
   await db
@@ -1105,7 +1107,7 @@ export async function createCheckout(db: Database, userId: string, shipmentIds: 
     id,
     userId,
     status: "READY",
-    currency: appConfig.currency,
+    currency: await customerCurrency(db),
     totalFen: total,
     createdAt: now,
     expiresAt: now + appConfig.checkoutTtlMs,
@@ -1206,7 +1208,7 @@ export async function payCheckout(db: Database, userId: string, checkoutId: stri
 
 export async function getWallet(db: Database, userId: string) {
   const wallet = (await db.select().from(wallets).where(eq(wallets.userId, userId)))[0];
-  return { balanceFen: wallet?.balanceFen ?? 0, currency: appConfig.currency, lowBalance: (wallet?.balanceFen ?? 0) < appConfig.lowBalanceFen };
+  return { balanceFen: wallet?.balanceFen ?? 0, currency: await customerCurrency(db), lowBalance: (wallet?.balanceFen ?? 0) < appConfig.lowBalanceFen };
 }
 
 export async function listTransactions(db: Database, userId: string, type: string, page: number, pageSize: number) {

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useToast } from "../../components/toast";
 import { ApiError, api } from "../../lib/api";
 import { useBrand } from "../../lib/brand";
+import { useI18n } from "../../lib/i18n";
 import { authClient, googleErrorMessage } from "../../lib/auth";
 
 type Preferences = {
@@ -299,11 +300,12 @@ function EmailChange({ profile }: { profile: AccountMe }) {
 }
 
 function Section({ title, body, children }: { title: string; body: string; children: ReactNode }) {
+  const { t } = useI18n();
   return (
     <section className="grid gap-4 py-6 first:pt-0 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
       <div>
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        <p className="mt-1 text-[13px] leading-5 text-slate-500">{body}</p>
+        <h2 className="text-sm font-semibold tracking-tight">{t(title)}</h2>
+        <p className="mt-1 text-[13px] leading-5 text-slate-500">{t(body)}</p>
       </div>
       <div className="min-w-0">{children}</div>
     </section>

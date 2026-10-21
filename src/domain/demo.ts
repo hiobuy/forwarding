@@ -1287,6 +1287,7 @@ export function demoAccess(method: string, path: string): "read" | "quote" | "de
     /^\/settings\/hiobuy-wallet$/,
     /^\/settings\/hiobuy-wallet\/transactions$/,
     /^\/settings\/hiobuy-wallet\/transactions\/[^/]+$/,
+    /^\/settings\/locale$/,
     /^\/settings\/tracking-events$/,
     /^\/settings\/invoicing$/,
     /^\/settings\/fulfillment-sync$/,

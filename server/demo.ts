@@ -4,6 +4,7 @@ import type { EarningRange } from "../src/domain/earnings";
 import { DEFAULT_TRACKING_EVENT_LABELS } from "../src/domain/tracking-events";
 import type { WorkerBindings } from "./auth";
 import { AppError } from "./errors";
+import { localeSettingsView } from "./locale";
 import { vasCatalog } from "../src/mocks/vas";
 
 type DemoEnv = {
@@ -114,6 +115,7 @@ function readDemo(path: string, query: Record<string, string | undefined>, catal
     const page = demoWalletTransactions({});
     return page.items.find((item) => item.id === decodeURIComponent(walletTx[1]!)) ?? undefined;
   }
+  if (path === "/settings/locale") return localeSettingsView({ enabledLocales: "en,zh-Hant,ru", defaultLocale: "en", customerCurrency: "USD" });
   if (path === "/settings/tracking-events") return { labels: DEFAULT_TRACKING_EVENT_LABELS };
   if (path === "/settings/invoicing") return demoInvoicing();
   if (path === "/settings/fulfillment-sync") return { paused: null, counts: {}, webhookConfigured: false, items: [] };

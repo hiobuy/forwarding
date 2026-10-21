@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PACKAGE_FILTERS } from "../../domain/status";
 import { formatDateTime } from "../../domain/dates";
 import { TimelineList } from "../../components/timeline";
-import { formatFen } from "../../domain/money";
+import { useI18n } from "../../lib/i18n";
 import { MAX_PREALERT_BATCH, normalizeTrackingInput } from "../../domain/tracking";
 import {
   Button,
@@ -209,6 +209,7 @@ function guessCourier(tracking: string) {
 }
 
 export function PrealertPage() {
+  const { t, currency } = useI18n();
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -396,7 +397,7 @@ export function PrealertPage() {
             <Field label="Quantity">
               <input className={inputClass} value={quantity} onChange={(event) => setQuantity(event.target.value)} inputMode="numeric" />
             </Field>
-            <Field label="Declared value (USD)">
+            <Field label={t("Declared value ({currency})", { currency })}>
               <input className={inputClass} value={value} onChange={(event) => setValue(event.target.value)} inputMode="decimal" />
             </Field>
             <div className="sm:col-span-2">
@@ -641,7 +642,7 @@ export function PackageDetailPage() {
               <dl className="mt-3 divide-y divide-slate-100">
                 <DataRow label="Name" value={item.productName ?? "—"} />
                 <DataRow label="Quantity" value={item.quantity ?? "—"} />
-                <DataRow label="Declared value" value={item.declaredValueFen == null ? "—" : formatFen(item.declaredValueFen)} />
+                <DataRow label="Declared value" value={item.declaredValueFen == null ? "—" : <Money fen={item.declaredValueFen} />} />
               </dl>
             </Card>
           </div>

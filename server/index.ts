@@ -95,7 +95,7 @@ app.onError((error, c) => {
 app.all("/api/auth/*", (c) => c.get("auth").handler(c.req.raw));
 
 app.use("/api/*", async (c, next) => {
-  if (c.req.path.startsWith("/api/auth") || c.req.path.startsWith("/api/dev") || c.req.path.startsWith("/api/team") || c.req.path === "/api/health" || c.req.path === "/api/branding" || c.req.path.startsWith("/api/branding/") || c.req.path.startsWith("/api/shipping/calculator") || c.req.path === "/api/payments/stripe/webhook" || c.req.path === "/api/webhooks/hiobuy" || c.req.path === "/api/demo/status" || c.req.path === "/api/security/public" || c.req.path === "/api/account/email/confirm") {
+  if (c.req.path.startsWith("/api/auth") || c.req.path.startsWith("/api/dev") || c.req.path.startsWith("/api/team") || c.req.path === "/api/health" || c.req.path === "/api/branding" || c.req.path.startsWith("/api/branding/") || c.req.path === "/api/locale" || c.req.path.startsWith("/api/shipping/calculator") || c.req.path === "/api/payments/stripe/webhook" || c.req.path === "/api/webhooks/hiobuy" || c.req.path === "/api/demo/status" || c.req.path === "/api/security/public" || c.req.path === "/api/account/email/confirm") {
     await next();
     return;
   }
@@ -147,6 +147,11 @@ const addressSchema = z.object({
 });
 
 app.get("/api/health", (c) => ok(c, { ok: true }));
+
+app.get("/api/locale", async (c) => {
+  const { publicLocale } = await import("./locale");
+  return ok(c, await publicLocale(c.get("db")));
+});
 
 app.get("/api/branding", async (c) => {
   const { publicBrand } = await import("./business");

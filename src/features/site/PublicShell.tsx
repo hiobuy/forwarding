@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { authClient } from "../../lib/auth";
 import { marketingAccent, useBrand, useSiteMode } from "../../lib/brand";
+import { LocaleSwitch, useI18n } from "../../lib/i18n";
 import { Ms } from "./icon";
 
 const NAV = [
@@ -13,6 +14,7 @@ const NAV = [
 ] as const;
 
 export function PublicShell({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const brand = useBrand();
   const site = useSiteMode();
   const { data } = authClient.useSession();
@@ -21,7 +23,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
   const showNav = site.mode === "integrated";
   const year = new Date().getFullYear();
   const company = brand.legalName.trim() || brand.name;
-  const blurb = brand.description.trim() || "A China warehouse address for your online orders, then one international shipment when you are ready.";
+  const blurb = brand.description.trim() || t("A China warehouse address for your online orders, then one international shipment when you are ready.");
 
   return (
     <div className="pb-site min-h-dvh" style={marketingAccent(brand)}>
@@ -33,13 +35,14 @@ export function PublicShell({ children }: { children: ReactNode }) {
               <nav className="hidden items-center gap-4 lg:flex" aria-label="Primary">
                 {NAV.map((item) => (
                   <a key={item.href} className="px-1 py-1 text-[15px] leading-6 text-[var(--pb-muted)] transition-colors hover:text-[var(--pb-on)]" href={item.href}>
-                    {item.label}
+                    {t(item.label)}
                   </a>
                 ))}
               </nav>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
+            <LocaleSwitch />
             {showNav ? (
               <button
                 type="button"
@@ -49,21 +52,21 @@ export function PublicShell({ children }: { children: ReactNode }) {
                 onClick={() => setOpen((value) => !value)}
               >
                 <Ms name={open ? "close" : "menu"} className="text-[22px]" />
-                <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+                <span className="sr-only">{open ? t("Close menu") : t("Open menu")}</span>
               </button>
             ) : null}
             {signedIn ? null : (
               <Link className="hidden items-center px-4 py-1 text-[12px] leading-4 font-bold text-[var(--pb-muted)] hover:text-[var(--pb-on)] sm:inline-flex" to="/auth/login">
-                Sign in
+                {t("Sign in")}
               </Link>
             )}
             <Link
               className="inline-flex items-center justify-center rounded-lg bg-[var(--pb-primary)] px-4 py-1 text-[12px] leading-4 font-bold text-white shadow-[0_4px_14px_rgba(8,123,115,0.25)] transition hover:-translate-y-0.5 hover:bg-[var(--pb-primary-strong)]"
               to={signedIn ? "/app/dashboard" : "/auth/register"}
             >
-              {signedIn ? "Dashboard" : "Sign up"}
+              {signedIn ? t("Dashboard") : t("Sign up")}
             </Link>
-            <Link to={signedIn ? "/app/dashboard" : "/auth/login"} className="ml-1 grid size-8 place-items-center rounded-full bg-[var(--pb-primary)] text-white" aria-label={signedIn ? "Open customer center" : "Sign in"}>
+            <Link to={signedIn ? "/app/dashboard" : "/auth/login"} className="ml-1 grid size-8 place-items-center rounded-full bg-[var(--pb-primary)] text-white" aria-label={signedIn ? t("Open customer center") : t("Sign in")}>
               <Ms name="person" className="text-[18px]" />
             </Link>
           </div>
@@ -72,11 +75,11 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <nav id="public-menu" className="border-t border-[var(--pb-border)] bg-white px-4 py-3 lg:hidden" aria-label="Mobile">
             {NAV.map((item) => (
               <a key={item.href} className="block rounded-lg px-2 py-2.5 text-[15px] text-[var(--pb-on)] hover:bg-[var(--pb-subtle)]" href={item.href} onClick={() => setOpen(false)}>
-                {item.label}
+                {t(item.label)}
               </a>
             ))}
             <Link className="mt-1 block rounded-lg px-2 py-2.5 text-[15px] font-bold text-[var(--pb-primary)] sm:hidden" to={signedIn ? "/app/dashboard" : "/auth/login"} onClick={() => setOpen(false)}>
-              {signedIn ? "Dashboard" : "Sign in"}
+              {signedIn ? t("Dashboard") : t("Sign in")}
             </Link>
           </nav>
         ) : null}
@@ -89,26 +92,26 @@ export function PublicShell({ children }: { children: ReactNode }) {
               <div className="text-[22px] leading-7 font-bold tracking-[-0.015em] text-white">{brand.name}</div>
               <p className="max-w-sm text-[13px] leading-5 text-[var(--pb-accent-border)]">{blurb}</p>
             </div>
-            <FooterColumn title="Customers">
-              {showNav ? <FooterLink href="/#calculator">Freight calculator</FooterLink> : <FooterLink to="/app/shipping-calculator">Freight calculator</FooterLink>}
-              {showNav ? <FooterLink href="/#how-it-works">How it works</FooterLink> : null}
-              {showNav ? <FooterLink href="/#services">Services</FooterLink> : null}
-              {showNav ? <FooterLink href="/#faq">FAQ</FooterLink> : null}
-              <FooterLink to={signedIn ? "/app/dashboard" : "/auth/register"}>{signedIn ? "Customer center" : "Create an account"}</FooterLink>
+            <FooterColumn title={t("Customers")}>
+              {showNav ? <FooterLink href="/#calculator">{t("Freight calculator")}</FooterLink> : <FooterLink to="/app/shipping-calculator">{t("Freight calculator")}</FooterLink>}
+              {showNav ? <FooterLink href="/#how-it-works">{t("How it works")}</FooterLink> : null}
+              {showNav ? <FooterLink href="/#services">{t("Services")}</FooterLink> : null}
+              {showNav ? <FooterLink href="/#faq">{t("FAQ")}</FooterLink> : null}
+              <FooterLink to={signedIn ? "/app/dashboard" : "/auth/register"}>{signedIn ? t("Customer center") : t("Create an account")}</FooterLink>
             </FooterColumn>
-            <FooterColumn title="Legal">
-              <PolicyFooter label="Privacy Policy" external={brand.website.privacyUrl} to="/privacy" />
-              <PolicyFooter label="Terms of Service" external={brand.website.termsUrl} to="/terms" />
+            <FooterColumn title={t("Legal")}>
+              <PolicyFooter label={t("Privacy Policy")} external={brand.website.privacyUrl} to="/privacy" />
+              <PolicyFooter label={t("Terms of Service")} external={brand.website.termsUrl} to="/terms" />
               {brand.supportEmail ? <FooterLink href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</FooterLink> : null}
             </FooterColumn>
-            <FooterColumn title="Developers">
-              <FooterLink href="https://developers.hiobuy.com">Technical support</FooterLink>
-              {site.githubUrl ? <FooterLink href={site.githubUrl}>GitHub source code</FooterLink> : null}
+            <FooterColumn title={t("Developers")}>
+              <FooterLink href="https://developers.hiobuy.com">{t("Technical support")}</FooterLink>
+              {site.githubUrl ? <FooterLink href={site.githubUrl}>{t("GitHub source code")}</FooterLink> : null}
             </FooterColumn>
           </div>
           <div className="flex flex-col items-start justify-between gap-3 border-t border-white/10 pt-6 text-[11px] leading-4 font-medium text-[var(--pb-accent-border)] sm:flex-row sm:items-center">
-            <div>© {year} {company}. All rights reserved.</div>
-            <div>Example legal pages stay marked as templates until the operator reviews them.</div>
+            <div>© {year} {company}. {t("All rights reserved.")}</div>
+            <div>{t("Example legal pages stay marked as templates until the operator reviews them.")}</div>
           </div>
         </div>
       </footer>

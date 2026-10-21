@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { formatCnyFen, formatRateE4 } from "../../domain/freight";
-import { formatFen } from "../../domain/money";
 import { Button, Dialog, EmptyState, ErrorState, Field, LoadingBlock, inputClass } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 
 type Attribute = { code: string; name: string };
@@ -24,6 +24,7 @@ type Quote = {
 type Result = { quotes: Quote[]; disclaimer: string };
 
 export function ShippingCalculator({ mode }: { mode: "public" | "customer" | "admin" }) {
+  const { t } = useI18n();
   const optionsPath = mode === "admin" ? "/api/admin/calculator/options" : "/api/shipping/calculator/options";
   const quotePath = mode === "admin" ? "/api/admin/calculator" : "/api/shipping/calculator";
   const options = useQuery({ queryKey: ["calculator-options", mode], queryFn: () => api<Options>(optionsPath) });
@@ -75,8 +76,8 @@ export function ShippingCalculator({ mode }: { mode: "public" | "customer" | "ad
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.18fr)]">
       <form className="rounded-xl border border-slate-200 bg-white p-4" onSubmit={onSubmit}>
-        <h2 className="text-sm font-semibold">Shipment details</h2>
-        <p className="mt-1 text-[13px] text-slate-500">Weight in kilograms. Dimensions in centimeters are optional.</p>
+        <h2 className="text-sm font-semibold">{t("Shipment details")}</h2>
+        <p className="mt-1 text-[13px] text-slate-500">{t("Weight in kilograms. Dimensions in centimeters are optional.")}</p>
         {options.isLoading ? <div className="mt-4"><LoadingBlock rows={3} /></div> : null}
         {options.isError ? <div className="mt-4"><ErrorState message="Could not load destinations." onRetry={() => void options.refetch()} /></div> : null}
         {options.data ? (
@@ -108,7 +109,7 @@ export function ShippingCalculator({ mode }: { mode: "public" | "customer" | "ad
                 </Field>
               ))}
             </div>
-            {error ? <p className="text-[13px] text-red-700" role="alert">{error}</p> : null}
+            {error ? <p className="text-[13px] text-red-700" role="alert">{t(error)}</p> : null}
             <Button type="submit" loading={quote.isPending} disabled={!options.data.connected || !options.data.countries.length || !options.data.attributes.length}>Get shipping rates</Button>
           </div>
         ) : null}
@@ -130,6 +131,7 @@ export function ShippingCalculator({ mode }: { mode: "public" | "customer" | "ad
 }
 
 function PublicQuotes({ quotes, onDetails }: { quotes: Quote[]; country: string; onDetails: (code: string) => void }) {
+  const { t, format } = useI18n();
   return (
     <ul className="space-y-2">
       {quotes.map((item, index) => (
@@ -140,13 +142,13 @@ function PublicQuotes({ quotes, onDetails }: { quotes: Quote[]; country: string;
                 <h3 className="text-sm font-semibold">{item.name}</h3>
                 {index === 0 ? <span className="rounded-full bg-indigo-50 px-1.5 text-[11px] font-medium text-indigo-700">Lowest price</span> : null}
               </div>
-              <p className="mt-1 text-[13px] text-slate-500">{item.eta ? `Estimated delivery: ${item.eta}` : "Delivery time not provided"}</p>
+              <p className="mt-1 text-[13px] text-slate-500">{item.eta ? t("Estimated delivery: {eta}", { eta: item.eta }) : t("Delivery time not provided")}</p>
               {item.description ? <p className="mt-1 text-[12px] leading-5 text-slate-400">{item.description}</p> : null}
               {item.note ? <p className="mt-1 text-[12px] leading-5 text-slate-500">{item.note}</p> : null}
-              {item.partial ? <p className="mt-1 text-[12px] text-slate-500">Partial estimate. Some charges are still unknown.</p> : null}
+              {item.partial ? <p className="mt-1 text-[12px] text-slate-500">{t("Partial estimate. Some charges are still unknown.")}</p> : null}
               <button type="button" className="mt-2 text-[13px] font-medium text-indigo-700 hover:text-indigo-800" onClick={() => onDetails(item.code)}>Channel details</button>
             </div>
-            <div className="text-right text-lg font-semibold tabular-nums">{formatFen(item.priceUsdFen)}</div>
+            <div className="text-right text-lg font-semibold tabular-nums">{format(item.priceUsdFen)}</div>
           </div>
         </li>
       ))}
@@ -155,6 +157,7 @@ function PublicQuotes({ quotes, onDetails }: { quotes: Quote[]; country: string;
 }
 
 function AdminQuotes({ quotes, onDetails }: { quotes: Quote[]; country: string; onDetails: (code: string) => void }) {
+  const { currency, format } = useI18n();
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full min-w-[640px] text-left text-[13px]">
@@ -177,9 +180,9 @@ function AdminQuotes({ quotes, onDetails }: { quotes: Quote[]; country: string; 
                 {item.note ? <div className="text-[11px] text-slate-400">{item.note}</div> : null}
               </td>
               <td className="px-3 py-2.5 text-right tabular-nums">{item.costCnyFen == null ? "—" : formatCnyFen(item.costCnyFen)}</td>
-              <td className="px-3 py-2.5 text-right font-medium tabular-nums">{formatFen(item.priceUsdFen)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{item.profitUsdFen == null ? "—" : formatFen(item.profitUsdFen)}</td>
-              <td className="px-3 py-2.5 text-slate-600">{item.eta ?? "—"}{item.cnyPerUsdE4 ? <span className="mt-0.5 block text-[11px] text-slate-400">{formatRateE4(item.cnyPerUsdE4)} CNY/USD</span> : null}</td>
+              <td className="px-3 py-2.5 text-right font-medium tabular-nums">{format(item.priceUsdFen)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{item.profitUsdFen == null ? "—" : format(item.profitUsdFen)}</td>
+              <td className="px-3 py-2.5 text-slate-600">{item.eta ?? "—"}{item.cnyPerUsdE4 ? <span className="mt-0.5 block text-[11px] text-slate-400">{formatRateE4(item.cnyPerUsdE4)} CNY per 1 {currency}</span> : null}</td>
             </tr>
           ))}
         </tbody>
@@ -202,6 +205,7 @@ type Detail = {
 };
 
 export function ChannelDialog({ mode, code, country, onClose }: { mode: "public" | "customer" | "admin"; code: string | null; country: string; onClose: () => void }) {
+  const { t } = useI18n();
   const path = mode === "admin"
     ? `/api/admin/calculator/channel?code=${encodeURIComponent(code ?? "")}&country=${encodeURIComponent(country)}`
     : `/api/shipping/calculator/channel?code=${encodeURIComponent(code ?? "")}&country=${encodeURIComponent(country)}`;
@@ -219,22 +223,22 @@ export function ChannelDialog({ mode, code, country, onClose }: { mode: "public"
         <div className="space-y-4 text-[13px]">
           {item.description ? <p className="leading-5 text-slate-600">{item.description}</p> : null}
           <dl className="space-y-2">
-            <DetailRow label="Delivery" value={item.delivery.join(", ") || "Not provided"} />
-            <DetailRow label="Weight range" value={item.range ?? "Not provided"} />
-            <DetailRow label="Volumetric weight" value={item.volumetric ?? "Not provided"} />
+            <DetailRow label={t("Delivery")} value={item.delivery.join(", ") || t("Not provided")} />
+            <DetailRow label={t("Weight range")} value={item.range ?? t("Not provided")} />
+            <DetailRow label={t("Volumetric weight")} value={item.volumetric ?? t("Not provided")} />
           </dl>
-          <DetailList title="Regions" empty="No regions returned for this destination.">
+          <DetailList title={t("Regions")} empty={t("No regions returned for this destination.")}>
             {item.regions.map((region) => (
               <li key={region.name} className="flex items-baseline justify-between gap-3 py-1">
                 <span className="font-medium text-ink">{region.name}</span>
-                <span className="text-slate-500">{region.eta ?? "Timing not provided"}</span>
+                <span className="text-slate-500">{region.eta ?? t("Timing not provided")}</span>
               </li>
             ))}
           </DetailList>
-          <DetailList title="Restrictions" empty="No order restrictions returned.">
+          <DetailList title={t("Restrictions")} empty={t("No order restrictions returned.")}>
             {item.restrictions.map((rule) => <li key={rule} className="py-1 text-slate-600">{rule}</li>)}
           </DetailList>
-          <DetailList title="Services" empty="No extra services returned.">
+          <DetailList title={t("Services")} empty={t("No extra services returned.")}>
             {item.services.map((service) => (
               <li key={service.name} className="py-1.5">
                 <div className="flex items-baseline justify-between gap-3">
@@ -246,7 +250,7 @@ export function ChannelDialog({ mode, code, country, onClose }: { mode: "public"
             ))}
           </DetailList>
           {item.rates ? (
-            <DetailList title="HioBuy reference rates" empty="No reference rates returned.">
+            <DetailList title={t("HioBuy reference rates")} empty={t("No reference rates returned.")}>
               {item.rates.map((card) => (
                 <li key={card.region} className="py-1.5">
                   <div className="font-medium text-ink">{card.region}</div>
@@ -260,7 +264,7 @@ export function ChannelDialog({ mode, code, country, onClose }: { mode: "public"
               ))}
             </DetailList>
           ) : null}
-          {item.rates ? <p className="text-[12px] leading-5 text-slate-400">These are HioBuy reference rates. The customer price is the quote in the list.</p> : null}
+          {item.rates ? <p className="text-[12px] leading-5 text-slate-400">{t("These are HioBuy reference rates. The customer price is the quote in the list.")}</p> : null}
         </div>
       ) : null}
     </Dialog>

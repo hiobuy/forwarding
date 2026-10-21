@@ -8,6 +8,7 @@ import "@fontsource/inter/600.css";
 import { App } from "./App";
 import { ToastProvider } from "./components/toast";
 import { BrandProvider } from "./lib/brand";
+import { LocaleProvider } from "./lib/i18n";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -19,9 +20,11 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
-          <BrandProvider>
-            <App />
-          </BrandProvider>
+          <LocaleProvider>
+            <BrandProvider>
+              <App />
+            </BrandProvider>
+          </LocaleProvider>
         </BrowserRouter>
       </ToastProvider>
     </QueryClientProvider>

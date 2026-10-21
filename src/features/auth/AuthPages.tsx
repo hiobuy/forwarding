@@ -6,6 +6,7 @@ import { Ms } from "../site/icon";
 import { Checkbox } from "../../components/ui/checkbox";
 import { api } from "../../lib/api";
 import { useBrand, usePageTitle } from "../../lib/brand";
+import { useI18n } from "../../lib/i18n";
 import { authClient, googleErrorMessage } from "../../lib/auth";
 import { authHeaders, TurnstileField } from "./TurnstileField";
 
@@ -20,11 +21,13 @@ function AuthFrame({
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  usePageTitle(title);
+  const { t } = useI18n();
+  const heading = t(title);
+  usePageTitle(heading);
   return (
     <section>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
-      {subtitle ? <p className="mt-2 text-sm leading-6 text-slate-500">{subtitle}</p> : null}
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{heading}</h1>
+      {subtitle ? <p className="mt-2 text-sm leading-6 text-slate-500">{t(subtitle)}</p> : null}
       <div className="mt-6">{children}</div>
       {footer ? <div className="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-500">{footer}</div> : null}
     </section>
@@ -34,11 +37,12 @@ function AuthFrame({
 type PublicSecurity = { google: { enabled: boolean }; turnstile: { enabled: boolean; siteKey: string; login: boolean; register: boolean; reset: boolean } };
 
 function GoogleButton({ callbackURL }: { callbackURL: string }) {
+  const { t } = useI18n();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   return (
     <div className="mt-4">
-      <div className="mb-4 flex items-center gap-3 text-[12px] text-slate-400"><span className="h-px flex-1 bg-slate-200" />or<span className="h-px flex-1 bg-slate-200" /></div>
+      <div className="mb-4 flex items-center gap-3 text-[12px] text-slate-400"><span className="h-px flex-1 bg-slate-200" />{t("or")}<span className="h-px flex-1 bg-slate-200" /></div>
       {error ? <Notice tone="danger">{error}</Notice> : null}
       <Button
         className="w-full"
@@ -52,7 +56,7 @@ function GoogleButton({ callbackURL }: { callbackURL: string }) {
           void authClient.signIn.social({ provider: "google", callbackURL, errorCallbackURL: "/auth/login" }).then((result) => {
             if (result.error) {
               setPending(false);
-              setError(result.error.message ?? "Google sign-in did not start.");
+              setError(result.error.message ?? t("Google sign-in did not start."));
             }
           });
         }}
@@ -65,11 +69,12 @@ function GoogleButton({ callbackURL }: { callbackURL: string }) {
 
 function LegalLinks() {
   const brand = useBrand();
+  const { t } = useI18n();
   return (
     <p className="text-[13px] text-slate-400">
-      <PolicyLink href={brand.website.termsUrl} to="/terms">Terms</PolicyLink>
+      <PolicyLink href={brand.website.termsUrl} to="/terms">{t("Terms")}</PolicyLink>
       <span className="px-1.5">·</span>
-      <PolicyLink href={brand.website.privacyUrl} to="/privacy">Privacy</PolicyLink>
+      <PolicyLink href={brand.website.privacyUrl} to="/privacy">{t("Privacy")}</PolicyLink>
       {brand.supportEmail ? (
         <>
           <span className="px-1.5">·</span>
@@ -87,6 +92,7 @@ function PolicyLink({ href, to, children }: { href: string; to: string; children
 }
 
 export function LoginPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [error, setError] = useState("");
@@ -103,7 +109,7 @@ export function LoginPage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (turnstileOn && !turnstileToken) {
-      setError("Complete the security check and try again.");
+      setError(t("Complete the security check and try again."));
       return;
     }
     setPending(true);
@@ -115,7 +121,7 @@ export function LoginPage() {
     if (result.error) {
       setTurnstileToken("");
       setTurnstileReset((value) => value + 1);
-      setError(result.error.message ?? "Could not sign in.");
+      setError(result.error.message ?? t("Could not sign in."));
       if (result.error.code === "EMAIL_NOT_VERIFIED") navigate(`/auth/verify-email?email=${encodeURIComponent(email)}`);
       return;
     }
@@ -144,7 +150,7 @@ export function LoginPage() {
     <AuthFrame
       title="Sign in"
       subtitle="Use the email you verified for your forwarding account."
-      footer={<div className="flex items-center justify-between gap-3"><LegalLinks /><Link className="font-medium text-ink" to={next ? `/auth/register?next=${encodeURIComponent(destination)}` : "/auth/register"}>Create account</Link></div>}
+      footer={<div className="flex items-center justify-between gap-3"><LegalLinks /><Link className="font-medium text-ink" to={next ? `/auth/register?next=${encodeURIComponent(destination)}` : "/auth/register"}>{t("Create account")}</Link></div>}
     >
       {needsCode ? (
         <form className="space-y-4" onSubmit={(event) => void onCode(event)}>
@@ -163,7 +169,7 @@ export function LoginPage() {
             {params.get("reset") ? <Notice tone="success">Password updated. Sign in with the new one.</Notice> : null}
             {googleErrorMessage(params.get("error")) ? <Notice tone="danger">{googleErrorMessage(params.get("error"))}</Notice> : null}
             <label className="block text-sm font-semibold text-slate-700" htmlFor="login-email">
-              Email address
+              {t("Email address")}
               <span className="relative mt-1.5 block">
                 <Ms name="mail" className="pointer-events-none absolute top-3.5 left-3.5 text-[16px] text-slate-400" />
                 <input id="login-email" className="auth-input" name="email" type="email" autoComplete="email" placeholder="name@email.com" required autoFocus />
@@ -171,8 +177,8 @@ export function LoginPage() {
             </label>
             <div>
               <div className="mb-1.5 flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700" htmlFor="login-password">Password</label>
-                <Link className="text-xs font-semibold text-[#087b73] hover:underline" to="/auth/forgot-password">Forgot password?</Link>
+                <label className="text-sm font-semibold text-slate-700" htmlFor="login-password">{t("Password")}</label>
+                <Link className="text-xs font-semibold text-[#087b73] hover:underline" to="/auth/forgot-password">{t("Forgot password?")}</Link>
               </div>
               <span className="relative block">
                 <Ms name="lock" className="pointer-events-none absolute top-3.5 left-3.5 z-10 text-[16px] text-slate-400" />
@@ -182,7 +188,7 @@ export function LoginPage() {
             {error ? <Notice tone="danger">{error}</Notice> : null}
             {turnstileOn && security.data ? <TurnstileField siteKey={security.data.turnstile.siteKey} onToken={setTurnstileToken} resetKey={turnstileReset} /> : null}
             <button className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#087b73] px-5 py-3.5 text-sm font-semibold text-white shadow-md shadow-teal-900/10 transition hover:bg-[#06635c] focus-visible:ring-4 focus-visible:ring-teal-500/25 disabled:opacity-60" type="submit" disabled={pending}>
-              {pending ? "Signing in…" : "Sign in to dashboard"}
+              {pending ? t("Signing in…") : t("Sign in to dashboard")}
               <Ms name="arrow_forward" className="text-[16px]" />
             </button>
           </form>
@@ -200,6 +206,7 @@ function safeNext(next: string | null) {
 }
 
 export function RegisterPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const brand = useBrand();
@@ -219,7 +226,7 @@ export function RegisterPage() {
       return;
     }
     if (turnstileOn && !turnstileToken) {
-      setError("Complete the security check and try again.");
+      setError(t("Complete the security check and try again."));
       return;
     }
     setPending(true);
@@ -308,6 +315,7 @@ export function VerifyPage() {
 }
 
 export function ForgotPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -329,7 +337,7 @@ export function ForgotPage() {
     const form = new FormData(event.currentTarget);
     const nextEmail = String(form.get("email") ?? "");
     if (turnstileOn && !turnstileToken) {
-      setError("Complete the security check and try again.");
+      setError(t("Complete the security check and try again."));
       return;
     }
     const result = await authClient.requestPasswordReset({ email: nextEmail, redirectTo: "/auth/reset-password", ...authHeaders(turnstileToken) });

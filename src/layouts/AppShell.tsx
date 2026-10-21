@@ -28,6 +28,7 @@ import { formatDateTime } from "../domain/dates";
 import { api } from "../lib/api";
 import { brandHomeHref } from "../domain/site";
 import { BrandLockup, useBrand, useSiteMode } from "../lib/brand";
+import { LocaleSwitch, useI18n } from "../lib/i18n";
 import { authClient } from "../lib/auth";
 
 const storageKey = "hiobuy-sidebar-collapsed";
@@ -62,6 +63,7 @@ const groups = [
 ];
 
 export function AppShell() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(storageKey) === "1");
@@ -143,16 +145,16 @@ export function AppShell() {
           <button
             type="button"
             className="hidden rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white md:inline-flex"
-            aria-label={compact ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={compact ? t("Expand sidebar") : t("Collapse sidebar")}
             onClick={toggleCollapsed}
           >
             {compact ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <nav className="scroll-area min-h-0 flex-1 space-y-4 overflow-y-auto px-2.5 pb-3" aria-label="Main">
+        <nav className="scroll-area min-h-0 flex-1 space-y-4 overflow-y-auto px-2.5 pb-3" aria-label={t("Main")}>
           {groups.map((group) => (
             <div key={group.label}>
-              <div className={`mb-1 px-2 text-[11px] font-medium text-slate-500 ${compact ? "sr-only" : ""}`}>{group.label}</div>
+              <div className={`mb-1 px-2 text-[11px] font-medium text-slate-500 ${compact ? "sr-only" : ""}`}>{t(group.label)}</div>
               <div className="space-y-0.5">
                 {group.links.map((link) => {
                   const count = link.badge === "claims" ? nav.data?.claims : link.badge === "unpaid" ? nav.data?.unpaidShipments : 0;
@@ -160,8 +162,8 @@ export function AppShell() {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      title={compact ? link.label : undefined}
-                      aria-label={count && link.badge === "unpaid" ? `${link.label}, ${count} to pay` : link.label}
+                      title={compact ? t(link.label) : undefined}
+                      aria-label={count && link.badge === "unpaid" ? `${t(link.label)}, ${count}` : t(link.label)}
                       onClick={onNavigate}
                       style={({ isActive }) => (isActive ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined)}
                       className={({ isActive }) =>
@@ -174,7 +176,7 @@ export function AppShell() {
                     >
                       <span className={`flex min-w-0 items-center ${compact ? "" : "gap-2.5"}`}>
                         <link.icon size={16} aria-hidden="true" className="shrink-0 opacity-90" />
-                        <span className={compact ? "sr-only" : "truncate"}>{link.label}</span>
+                        <span className={compact ? "sr-only" : "truncate"}>{t(link.label)}</span>
                       </span>
                       {count ? (
                         compact ? (
@@ -194,11 +196,11 @@ export function AppShell() {
           <div className="px-2.5 pb-2">
             <NavLink
               to="/admin"
-              title={compact ? "Operations admin" : undefined}
+              title={compact ? t("Operations admin") : undefined}
               className={`flex items-center gap-2.5 rounded-lg border border-amber-400/20 bg-amber-400/10 text-[13px] text-amber-200 transition-colors hover:bg-amber-400/15 ${compact ? "justify-center px-2 py-2.5" : "px-2.5 py-2"}`}
             >
               <ShieldCheck size={16} aria-hidden="true" />
-              <span className={compact ? "sr-only" : ""}>Operations admin</span>
+              <span className={compact ? "sr-only" : ""}>{t("Operations admin")}</span>
             </NavLink>
           </div>
         ) : me.data?.demoMode ? (
@@ -206,13 +208,13 @@ export function AppShell() {
             <NavLink
               to="/admin/demo"
               onClick={onNavigate}
-              title={compact ? "Admin demo" : undefined}
+              title={compact ? t("Admin demo") : undefined}
               className={`flex items-center gap-2.5 rounded-lg border border-indigo-400/25 bg-indigo-400/10 text-[13px] text-indigo-100 transition-colors hover:bg-indigo-400/15 ${compact ? "justify-center px-2 py-2.5" : "px-2.5 py-2"}`}
             >
               <LayoutGrid size={16} aria-hidden="true" />
               <span className={compact ? "sr-only" : "flex min-w-0 flex-1 items-center justify-between gap-2"}>
-                <span className="truncate">Admin demo</span>
-                <span className="rounded bg-indigo-400/20 px-1.5 text-[10px] font-medium uppercase tracking-wide text-indigo-200">Read-only</span>
+                <span className="truncate">{t("Admin demo")}</span>
+                <span className="rounded bg-indigo-400/20 px-1.5 text-[10px] font-medium uppercase tracking-wide text-indigo-200">{t("Read-only")}</span>
               </span>
             </NavLink>
           </div>
@@ -225,10 +227,10 @@ export function AppShell() {
             {compact ? null : (
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-white">{name}</div>
-                <div className="truncate text-xs text-slate-500">Member {session?.user.memberCode}</div>
+                <div className="truncate text-xs text-slate-500">{t("Member")} {session?.user.memberCode}</div>
               </div>
             )}
-            <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white" aria-label="Log out" onClick={() => void logout()}>
+            <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white" aria-label={t("Log out")} onClick={() => void logout()}>
               <LogOut size={16} />
             </button>
           </div>
@@ -244,9 +246,9 @@ export function AppShell() {
       </aside>
       {open ? (
         <div className="fixed inset-0 z-40 md:hidden">
-          <button className="dialog-backdrop absolute inset-0 bg-slate-950/50" aria-label="Close menu" onClick={() => setOpen(false)} />
+          <button className="dialog-backdrop absolute inset-0 bg-slate-950/50" aria-label={t("Close menu")} onClick={() => setOpen(false)} />
           <aside className="drawer-in relative h-dvh w-[280px] max-w-[85vw] overflow-hidden bg-[#1a1a1a] shadow-2xl">
-            <button type="button" className="absolute top-4 right-3 z-10 rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white" aria-label="Close menu" onClick={() => setOpen(false)}>
+            <button type="button" className="absolute top-4 right-3 z-10 rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white" aria-label={t("Close menu")} onClick={() => setOpen(false)}>
               <X size={18} />
             </button>
             {renderSidebar({ compact: false, onNavigate: () => setOpen(false) })}
@@ -256,22 +258,23 @@ export function AppShell() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.04)] md:rounded-2xl">
         <header className="relative z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white px-4 md:px-6">
           <div className="flex items-center gap-2 md:hidden">
-            <button type="button" className="-ml-1.5 rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
+            <button type="button" className="-ml-1.5 rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label={t("Open menu")} aria-expanded={open} onClick={() => setOpen(true)}>
               <Menu size={19} />
             </button>
             <BrandLockup compact tone="dark" />
           </div>
           <div ref={notesRef} className="relative ml-auto flex items-center gap-1.5">
+            <LocaleSwitch tone="muted" />
             {session?.user.memberCode ? (
               <span className="mr-1 hidden items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[12px] text-slate-500 sm:inline-flex" title="Your member code. Put it on every parcel sent to the warehouse.">
-                Member <span className="font-mono font-medium text-slate-700">{session.user.memberCode}</span>
+                {t("Member")} <span className="font-mono font-medium text-slate-700">{session.user.memberCode}</span>
               </span>
             ) : null}
             {session?.user.id && customerAi ? <AssistantToggle open={assistantOpen} onToggle={() => setAssistantOpen((value) => !value)} /> : null}
             <button
               type="button"
               className={`relative grid size-9 place-items-center rounded-lg transition-colors ${notesOpen ? "bg-slate-100 text-ink" : "text-slate-600 hover:bg-slate-100"}`}
-              aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+              aria-label={unread ? `${t("Notifications")}, ${unread}` : t("Notifications")}
               aria-expanded={notesOpen}
               aria-haspopup="dialog"
               onClick={() => void openNotes()}
@@ -280,9 +283,9 @@ export function AppShell() {
               {unread ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-rose-500 ring-2 ring-white" /> : null}
             </button>
             {notesOpen ? (
-              <div className="pop-in absolute top-12 right-0 z-40 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_-12px_rgba(16,24,40,0.25)]" role="dialog" aria-label="Notifications">
+              <div className="pop-in absolute top-12 right-0 z-40 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_-12px_rgba(16,24,40,0.25)]" role="dialog" aria-label={t("Notifications")}>
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                  <span className="text-sm font-semibold">Notifications</span>
+                  <span className="text-sm font-semibold">{t("Notifications")}</span>
                   {notes.data?.length ? <span className="text-[12px] text-slate-400 tabular-nums">{notes.data.length}</span> : null}
                 </div>
                 <div className="scroll-area max-h-[min(24rem,70vh)] overflow-auto">
@@ -308,7 +311,7 @@ export function AppShell() {
                   ) : (
                     <div className="px-4 py-8 text-center">
                       <BellOff size={18} className="mx-auto text-slate-300" aria-hidden="true" />
-                      <p className="mt-2 text-[13px] text-slate-500">You're all caught up.</p>
+                      <p className="mt-2 text-[13px] text-slate-500">{t("You're all caught up.")}</p>
                     </div>
                   )}
                 </div>

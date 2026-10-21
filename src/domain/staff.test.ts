@@ -81,6 +81,8 @@ describe("admin route gates", () => {
       ["POST", "/packages/pkg_1/exception", "packages.exception"],
       ["POST", "/packages/pkg_1/receive", "packages.write"],
       ["GET", "/packages/pkg_1", "packages.read"],
+      ["GET", "/settings/locale", "settings.read"],
+      ["PUT", "/settings/locale", "settings.write"],
       ["GET", "/settings/business", "settings.read"],
       ["PUT", "/settings/business", "business.write"],
       ["POST", "/settings/business/assets/primary", "business.write"],

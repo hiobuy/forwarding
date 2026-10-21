@@ -856,6 +856,11 @@ export const platformSettings = sqliteTable("platform_settings", {
   turnstileReset: integer("turnstile_reset", { mode: "boolean" }).notNull().default(false),
   customerAiEnabled: integer("customer_ai_enabled", { mode: "boolean" }).notNull().default(true),
   hiobuyPay2fa: integer("hiobuy_pay_2fa", { mode: "boolean" }).notNull().default(false),
+  /** Comma-separated locale codes from the code catalog. */
+  enabledLocales: text("enabled_locales").notNull().default("en,zh-Hant,ru"),
+  defaultLocale: text("default_locale").notNull().default("en"),
+  /** Customer-facing prices, wallet, and new card charges. Two decimal places. */
+  customerCurrency: text("customer_currency").notNull().default("USD"),
   updatedAt: integer("updated_at").notNull(),
   updatedBy: text("updated_by"),
 });

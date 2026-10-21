@@ -51,7 +51,7 @@ import {
   verifyHioBuySignature,
   webhookDisposition,
 } from "../src/domain/fulfillment-sync";
-import { appConfig } from "./config";
+import { customerCurrency } from "./locale";
 import type { Database } from "./db/client";
 import {
   cartonPackages,
@@ -751,7 +751,7 @@ async function billActualFreight(db: Database, shipment: typeof shipments.$infer
   if (open.length === 1 && open[0]?.status === "DUE" && open[0].amountFen === usd) return;
   const now = Date.now();
   await db.delete(charges).where(and(eq(charges.shipmentId, shipment.id), eq(charges.type, "FREIGHT"), inArray(charges.status, ["ESTIMATED", "DUE"])));
-  await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: shipment.id, type: "FREIGHT", name: "International freight", amountFen: usd, currency: appConfig.currency, status: "DUE" });
+  await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: shipment.id, type: "FREIGHT", name: "International freight", amountFen: usd, currency: await customerCurrency(db), status: "DUE" });
   await snapshotRemoteFreight(db, shipment.id, usd, cny);
   if (shipment.status === "CONSOLIDATING" || shipment.status === "WAITING_FOR_WEIGHT") {
     await db.update(shipments).set({ status: "TO_PAY", canCancel: true, updatedAt: now }).where(eq(shipments.id, shipment.id));
@@ -2145,11 +2145,12 @@ async function applyReadyForPayment(db: Database, shipmentId: string | null, ext
   const now = Date.now();
   if (decision.kind === "bill") {
     await db.delete(charges).where(and(eq(charges.shipmentId, shipment.id), eq(charges.type, "FREIGHT")));
-    await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: shipment.id, type: "FREIGHT", name: "International freight", amountFen: decision.usdFen, currency: appConfig.currency, status: "DUE" });
+    const currency = await customerCurrency(db);
+    await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: shipment.id, type: "FREIGHT", name: "International freight", amountFen: decision.usdFen, currency, status: "DUE" });
     await db.update(shipments).set({ status: "TO_PAY", upstreamStatus: "WAIT_PAYMENT", canCancel: false, hiobuyShipmentId: shipmentId || shipment.hiobuyShipmentId, hiobuySyncedAt: now, updatedAt: now }).where(eq(shipments.id, shipment.id));
     await snapshotRemoteFreight(db, shipment.id, decision.usdFen, cny);
     await notify(db, shipment.userId, { type: "PAYMENT", title: "Shipment ready for payment", body: `${shipment.publicId} is packed. Final freight is ready to pay.`, href: `/app/shipments/${shipment.id}` });
-    return `${shipment.publicId} billed ${(decision.usdFen / 100).toFixed(2)} ${appConfig.currency}.`;
+    return `${shipment.publicId} billed ${(decision.usdFen / 100).toFixed(2)} ${currency}.`;
   }
   if (decision.kind === "review") {
     await insertTask(db, {

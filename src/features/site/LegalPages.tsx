@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useBrand, usePageTitle } from "../../lib/brand";
+import { useI18n } from "../../lib/i18n";
 import { Ms } from "./icon";
 import { PublicShell } from "./PublicShell";
 
@@ -13,15 +14,17 @@ type Section = { id: string; title: string; blocks: Block[] };
 const UPDATED = "October 17, 2026";
 
 export function PrivacyPolicyPage() {
-  usePageTitle("Privacy Policy");
+  const { t } = useI18n();
   const brand = useBrand();
+  usePageTitle(t("Privacy Policy"));
   const company = brand.legalName.trim() || brand.name;
   const contact = brand.supportEmail || brand.email;
   return (
     <LegalDocument
+      name={brand.name}
       kicker="Privacy Policy"
       title="Privacy Policy"
-      lead={`This example explains how ${brand.name} may collect and use personal information for parcel forwarding. It is a template. It is not a statement that the text complies with every privacy law.`}
+      lead="This example explains how {name} may collect and use personal information for parcel forwarding. It is a template. It is not a statement that the text complies with every privacy law."
       notice="This is demonstration content, not a finalized privacy policy. Replace the example with the operator’s actual practices, name the service providers in use, and obtain legal review before accepting real customers."
       sections={privacySections(brand.name, company, contact, brand.address, brand.country)}
     />
@@ -29,15 +32,17 @@ export function PrivacyPolicyPage() {
 }
 
 export function TermsOfServicePage() {
-  usePageTitle("Terms of Service");
+  const { t } = useI18n();
   const brand = useBrand();
+  usePageTitle(t("Terms of Service"));
   const company = brand.legalName.trim() || brand.name;
   const contact = brand.supportEmail || brand.email;
   return (
     <LegalDocument
+      name={brand.name}
       kicker="Terms of Service"
-      title={<>Terms of <span className="text-[var(--pb-primary)]">Service</span></>}
-      lead={`These example terms describe use of ${brand.name} to receive purchases in China and arrange international delivery. They are not ready to publish.`}
+      title="Terms of Service"
+      lead="These example terms describe use of {name} to receive purchases in China and arrange international delivery. They are not ready to publish."
       notice="This is illustrative text, not ready-to-publish legal terms. Before accepting real orders, the operator must supply its legal entity, service territory, prohibited-goods policy, fee schedule, refund terms, liability provisions, dispute process, and obtain legal review."
       sections={termsSections(brand.name, company, contact, brand.address, brand.country)}
     />
@@ -183,7 +188,8 @@ function contactLine(company: string, contact: string, address: string, country:
   return bits.join(" · ");
 }
 
-function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: string; title: ReactNode; lead: string; notice: string; sections: Section[] }) {
+function LegalDocument({ name, kicker, title, lead, notice, sections }: { name: string; kicker: string; title: ReactNode; lead: string; notice: string; sections: Section[] }) {
+  const { t } = useI18n();
   const [active, setActive] = useState(sections[0]?.id ?? "");
   const sectionIds = sections.map((section) => section.id).join("|");
   useEffect(() => {
@@ -208,17 +214,17 @@ function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: stri
             <div className="inline-flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--pb-primary)]/10 px-3 py-1 text-[12px] leading-4 font-extrabold tracking-[0.12em] text-[var(--pb-primary)] uppercase">
                 <span className="size-1.5 rounded-full bg-[var(--pb-primary)]" />
-                {kicker}
+                {t(kicker)}
               </span>
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-1.5 text-[11px] leading-4 font-medium text-[var(--pb-text-muted)] shadow-sm">
               <Ms name="schedule" className="text-[15px] text-[var(--pb-primary)]" />
-              <span>Template updated {UPDATED}</span>
+              <span>{t("Template updated {date}", { date: UPDATED })}</span>
             </div>
           </div>
           <div className="max-w-3xl">
-            <h1 className="mb-4 text-[40px] leading-[44px] font-extrabold tracking-[-0.03em] sm:text-[56px] sm:leading-[62px] sm:tracking-[-0.04em]">{title}</h1>
-            <p className="text-[17px] leading-[30px] text-[var(--pb-muted)]">{lead}</p>
+            <h1 className="mb-4 text-[40px] leading-[44px] font-extrabold tracking-[-0.03em] sm:text-[56px] sm:leading-[62px] sm:tracking-[-0.04em]">{typeof title === "string" ? t(title) : title}</h1>
+            <p className="text-[17px] leading-[30px] text-[var(--pb-muted)]">{t(lead, { name })}</p>
           </div>
           <div className="relative mt-8 overflow-hidden rounded-xl bg-white p-6 shadow-[0_12px_30px_rgba(22,78,65,0.08)]">
             <div className="absolute inset-y-0 left-0 w-1.5 bg-[var(--pb-kraft)]" />
@@ -228,10 +234,10 @@ function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: stri
               </div>
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className="text-[16px] leading-[22px] font-bold">Template notice</span>
-                  <span className="rounded bg-[var(--pb-container)] px-2 py-0.5 text-[10px] font-extrabold tracking-[0.12em] text-[var(--pb-muted)] uppercase">Needs review</span>
+                  <span className="text-[16px] leading-[22px] font-bold">{t("Template notice")}</span>
+                  <span className="rounded bg-[var(--pb-container)] px-2 py-0.5 text-[10px] font-extrabold tracking-[0.12em] text-[var(--pb-muted)] uppercase">{t("Needs review")}</span>
                 </div>
-                <p className="text-[13px] leading-5 text-[var(--pb-muted)]">{notice}</p>
+                <p className="text-[13px] leading-5 text-[var(--pb-muted)]">{t(notice)}</p>
               </div>
             </div>
           </div>
@@ -240,10 +246,10 @@ function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: stri
       <section className="w-full py-8 sm:py-12">
         <div className="mx-auto grid max-w-[1120px] grid-cols-1 items-start gap-8 px-4 sm:px-6 lg:grid-cols-12">
           <aside className="lg:sticky lg:top-24 lg:col-span-4">
-            <nav className="rounded-xl bg-white p-6 shadow-[0_12px_30px_rgba(22,78,65,0.06)]" aria-label="On this page">
+            <nav className="rounded-xl bg-white p-6 shadow-[0_12px_30px_rgba(22,78,65,0.06)]" aria-label={t("On this page")}>
               <div className="mb-4 flex items-center gap-2 text-[12px] leading-4 font-extrabold tracking-[0.12em] text-[var(--pb-primary)] uppercase">
                 <Ms name="format_list_bulleted" className="text-[18px]" />
-                On this page
+                {t("On this page")}
               </div>
               <div className="space-y-1">
                 {sections.map((section, index) => (
@@ -253,7 +259,7 @@ function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: stri
                     className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-[13px] leading-5 transition ${active === section.id ? "bg-[var(--pb-container)] font-bold text-[var(--pb-primary)]" : "text-[var(--pb-on)] hover:bg-[var(--pb-subtle)]"}`}
                     aria-current={active === section.id ? "true" : undefined}
                   >
-                    <span className="truncate">{index + 1}. {section.title}</span>
+                    <span className="truncate">{index + 1}. {t(section.title)}</span>
                     <Ms name="chevron_right" className="text-[16px] text-[var(--pb-text-muted)]" />
                   </a>
                 ))}
@@ -265,7 +271,7 @@ function LegalDocument({ kicker, title, lead, notice, sections }: { kicker: stri
               <article key={section.id} id={section.id} className="scroll-mt-24 rounded-2xl bg-white p-6 shadow-[0_12px_30px_rgba(22,78,65,0.06)] sm:p-8">
                 <div className="mb-3 flex items-center gap-3">
                   <span className="grid size-7 place-items-center rounded-lg bg-[var(--pb-container)] text-[13px] font-bold text-[var(--pb-primary)]">{String(index + 1).padStart(2, "0")}</span>
-                  <h2 className="text-[28px] leading-[34px] font-bold tracking-[-0.02em] sm:text-[32px] sm:leading-10">{section.title}</h2>
+                  <h2 className="text-[28px] leading-[34px] font-bold tracking-[-0.02em] sm:text-[32px] sm:leading-10">{t(section.title)}</h2>
                 </div>
                 <SectionBody blocks={section.blocks} />
               </article>

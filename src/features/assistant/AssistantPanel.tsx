@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, 
 import { useNavigate } from "react-router";
 import { assistantPage } from "../../domain/assistant-pages";
 import { api } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import type { PackageItem, Page, Shipment } from "../../types/api";
 import { VoiceBars, VoiceOrb, type OrbMode } from "./VoiceOrb";
@@ -37,6 +38,7 @@ const stageCopy = {
 };
 
 export function AssistantToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
@@ -50,8 +52,8 @@ export function AssistantToggle({ open, onToggle }: { open: boolean; onToggle: (
       <span className="relative grid size-4 place-items-center" aria-hidden="true">
         <span className="assistant-dot absolute inset-0 rounded-full" />
       </span>
-      <span className="hidden sm:inline">Assistant</span>
-      <span className="sr-only sm:hidden">Assistant</span>
+      <span className="hidden sm:inline">{t("Assistant")}</span>
+      <span className="sr-only sm:hidden">{t("Assistant")}</span>
     </button>
   );
 }
@@ -88,6 +90,7 @@ function useEntityLinks() {
 type Entity = { id: string; kind: "package" | "shipment" | "tracking"; label: string; detail: string; path: string };
 
 function AssistantChat({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const { t } = useI18n();
   const agent = useAgent<{ pending: { summary: string } | null }>({
     agent: "ForwardingAssistant",
     name: userId,
@@ -173,15 +176,15 @@ function AssistantChat({ userId, onClose }: { userId: string; onClose: () => voi
             <div className="flex items-center gap-2.5">
               <span className="assistant-avatar size-8 rounded-full" aria-hidden="true" />
               <div>
-                <h2 className="text-sm font-semibold text-ink">Assistant</h2>
+                <h2 className="text-sm font-semibold text-ink">{t("Assistant")}</h2>
                 <p className="flex items-center gap-1.5 text-[12px] text-slate-500">
                   <span className={cn("size-1.5 rounded-full", agent.readyState === 1 ? "bg-emerald-500" : "bg-slate-300")} aria-hidden="true" />
-                  Answers from your account
+                  {t("Answers from your account")}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <button type="button" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-ink" aria-label="Close assistant" onClick={onClose}>
+              <button type="button" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-ink" aria-label={t("Close assistant")} onClick={onClose}>
                 <X size={17} />
               </button>
             </div>
@@ -196,7 +199,7 @@ function AssistantChat({ userId, onClose }: { userId: string; onClose: () => voi
                 >
                   <span className="relative z-10 flex items-center justify-between gap-3">
                     <span>
-                      <span className="block text-[15px] font-semibold">{stageCopy.heroTitle}</span>
+                      <span className="block text-[15px] font-semibold">{t(stageCopy.heroTitle)}</span>
                       <span className="mt-0.5 block text-[12px] leading-[18px] text-indigo-100/90">{stageCopy.heroHint}</span>
                     </span>
                     <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur transition group-hover:scale-105 group-hover:bg-white/25">
@@ -204,7 +207,7 @@ function AssistantChat({ userId, onClose }: { userId: string; onClose: () => voi
                     </span>
                   </span>
                 </button>
-                <p className="mt-5 mb-2 text-[12px] font-medium text-slate-500">Or start with</p>
+                <p className="mt-5 mb-2 text-[12px] font-medium text-slate-500">{t("Or start with")}</p>
                 <div className="grid gap-2">
                   {prompts.map((prompt) => (
                     <button
@@ -214,7 +217,7 @@ function AssistantChat({ userId, onClose }: { userId: string; onClose: () => voi
                       onClick={() => ask(prompt.text)}
                     >
                       <prompt.icon size={15} className="text-slate-400 group-hover:text-indigo-500" aria-hidden="true" />
-                      <span className="flex-1">{prompt.text}</span>
+                      <span className="flex-1">{t(prompt.text)}</span>
                       <ArrowRight size={14} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-400" aria-hidden="true" />
                     </button>
                   ))}

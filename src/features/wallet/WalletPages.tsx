@@ -7,6 +7,7 @@ import { Button, Card, CopyButton, EmptyState, ErrorState, Field, FilterBar, Loa
 import { useToast } from "../../components/toast";
 import { ApiError, api } from "../../lib/api";
 import { downloadPdf } from "../../lib/download";
+import { useI18n } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import type { Page, WalletTx } from "../../types/api";
 
@@ -29,6 +30,7 @@ const transferFilters = [
 ] as const;
 
 export function WalletPage() {
+  const { t, currency } = useI18n();
   const [params] = useSearchParams();
   const toast = useToast();
   const [type, setType] = useState("all");
@@ -45,11 +47,11 @@ export function WalletPage() {
         <div className="pointer-events-none absolute -top-16 -right-10 size-48 rounded-full bg-indigo-500/25 blur-3xl" aria-hidden="true" />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[13px] text-slate-400">Available balance · USD</div>
+            <div className="text-[13px] text-slate-400">{t("Available balance · {currency}", { currency })}</div>
             <div className="mt-1 text-[2.25rem] leading-none font-semibold tracking-tight">
               {wallet.data ? <Money fen={wallet.data.balanceFen} /> : <span className="inline-block h-9 w-36 animate-pulse rounded-lg bg-white/10" />}
             </div>
-            {wallet.data?.lowBalance ? <p className="mt-2 text-[13px] text-amber-300">Low balance. Top up before your next freight payment.</p> : null}
+            {wallet.data?.lowBalance ? <p className="mt-2 text-[13px] text-amber-300">{t("Low balance. Top up before your next freight payment.")}</p> : null}
           </div>
           <Button to="/app/wallet/top-up" className="bg-white text-ink shadow-none hover:bg-slate-100 active:bg-slate-200">
             <Plus size={15} aria-hidden="true" /> Top up
@@ -205,6 +207,7 @@ type PayOptions = {
 };
 
 export function TopUpPage() {
+  const { t, symbol, currency, format } = useI18n();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -391,8 +394,8 @@ export function TopUpPage() {
                 aria-pressed={!custom && amount === preset}
                 onClick={() => { setCustom(false); setAmount(preset); }}
               >
-                <div className="text-lg font-semibold tabular-nums">${preset}</div>
-                <div className="text-[12px] text-slate-500">Wallet credit ${preset}</div>
+                <div className="text-lg font-semibold tabular-nums">{symbol}{preset}</div>
+                <div className="text-[12px] text-slate-500">{t("Wallet credit {amount}", { amount: `${symbol}${preset}` })}</div>
               </button>
             ))}
             <button
@@ -407,8 +410,8 @@ export function TopUpPage() {
           </div>
           {custom ? (
             <div className="relative mt-3 max-w-xs">
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-slate-400">$</span>
-              <input className={cn(inputClass, "pl-7 tabular-nums")} value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" aria-label="Custom amount in USD" />
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-slate-400">{symbol}</span>
+              <input className={cn(inputClass, "pl-7 tabular-nums")} value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" aria-label={t("Custom amount in {currency}", { currency })} />
             </div>
           ) : null}
         </div>
@@ -467,7 +470,7 @@ export function TopUpPage() {
         ) : null}
         {selected === "card" ? (
           <Button className="w-full sm:w-auto" size="lg" loading={card.isPending} disabled={invalid} onClick={() => { setError(""); if (!invalid) card.mutate(); }}>
-            Pay ${invalid ? "" : value.toFixed(2)} by card
+            {t("Pay {amount} by card", { amount: invalid ? "" : format(Math.round(value * 100)) })}
           </Button>
         ) : null}
       </Card>

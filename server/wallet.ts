@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { appConfig } from "./config";
+import { customerCurrency } from "./locale";
 import type { Database } from "./db/client";
 import { walletTransactions, wallets } from "./db/schema";
 import { AppError } from "./errors";
@@ -49,7 +49,7 @@ export async function moveWallet(db: Database, move: WalletMove) {
     userId: move.userId,
     type: move.type,
     amountFen: move.amountFen,
-    currency: appConfig.currency,
+    currency: await customerCurrency(db),
     balanceBefore: wallet.balanceFen,
     balanceAfter: next,
     referenceType: move.referenceType,

@@ -8,6 +8,7 @@ import { decryptSecret, encryptSecret } from "./email/crypto";
 import { notify } from "./notify";
 import { moveWallet } from "./wallet";
 import { AppError } from "./errors";
+import { customerCurrency } from "./locale";
 
 
 type PayEnv = { BETTER_AUTH_SECRET?: string; APP_URL?: string };
@@ -22,7 +23,7 @@ export async function paymentOptions(db: Database) {
   const bankReady = Boolean(row.bankEnabled && row.bankName && row.accountHolder && row.accountNumber);
   const stripeReady = Boolean(row.stripeEnabled && row.stripePublishableKey && row.stripeSecretCiphertext);
   return {
-    currency: "USD",
+    currency: await customerCurrency(db),
     stripe: stripeReady,
     publishableKey: stripeReady ? row.stripePublishableKey : null,
     cardTopup: Boolean(stripeReady && row.cardTopupEnabled),
@@ -140,12 +141,13 @@ export async function createShipmentCheckoutSession(db: Database, env: PayEnv, u
   if (!checkout || checkout.status !== "READY") throw new AppError("CHECKOUT_CLOSED", "This checkout is no longer payable.");
   const existing = (await db.select().from(payments).where(and(eq(payments.checkoutId, checkoutId), eq(payments.status, "paid"))))[0];
   if (existing) throw new AppError("CHECKOUT_CLOSED", "This shipment is already paid.");
+  const currency = await customerCurrency(db);
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: `${origin}/app/checkout/${checkoutId}/return?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/checkout/${checkoutId}`,
     client_reference_id: checkoutId,
-    line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: checkout.totalFen, product_data: { name: "Freight payment" } } }],
+    line_items: [{ quantity: 1, price_data: { currency: currency.toLowerCase(), unit_amount: checkout.totalFen, product_data: { name: "Freight payment" } } }],
     metadata: { purpose: "shipment", checkoutId, userId, amountFen: String(checkout.totalFen) },
   });
   await db.insert(payments).values({
@@ -154,7 +156,7 @@ export async function createShipmentCheckoutSession(db: Database, env: PayEnv, u
     purpose: "shipment",
     method: "stripe",
     amountFen: checkout.totalFen,
-    currency: "USD",
+    currency,
     status: "pending",
     checkoutId,
     shipmentId: null,
@@ -181,12 +183,13 @@ export async function createTopupCheckoutSession(db: Database, env: PayEnv, user
   const used = recent.filter((row) => row.status === "paid" || row.status === "held").reduce((sum, row) => sum + row.amountFen, 0);
   if (used + amountFen > settings.dailyTopupFen) throw new AppError("VALIDATION_ERROR", "This top-up would pass the daily card limit.");
   const stripe = await stripeClient(db, env);
+  const currency = await customerCurrency(db);
   const held = amountFen >= settings.maxTopupFen;
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: `${origin}/app/wallet?topup=pending`,
     cancel_url: `${origin}/app/wallet/top-up`,
-    line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: amountFen, product_data: { name: "Wallet top-up" } } }],
+    line_items: [{ quantity: 1, price_data: { currency: currency.toLowerCase(), unit_amount: amountFen, product_data: { name: "Wallet top-up" } } }],
     metadata: { purpose: "topup", userId, amountFen: String(amountFen), held: held ? "1" : "0" },
   });
   await db.insert(payments).values({
@@ -195,7 +198,7 @@ export async function createTopupCheckoutSession(db: Database, env: PayEnv, user
     purpose: "topup",
     method: "stripe",
     amountFen,
-    currency: "USD",
+    currency,
     status: "pending",
     checkoutId: null,
     shipmentId: null,
@@ -268,13 +271,14 @@ export async function createBankTransfer(
   const id = crypto.randomUUID();
   const publicId = `BT-${Date.now().toString(36).toUpperCase()}`;
   const objectKey = `transfers/${id}.${ext}`;
+  const currency = await customerCurrency(db);
   await bucket.put(objectKey, await proof.arrayBuffer(), { httpMetadata: { contentType: proof.type } });
   await db.insert(bankTransfers).values({
     id,
     publicId,
     userId,
     amountFen: input.amountFen,
-    currency: "USD",
+    currency,
     reference: input.reference.trim() || null,
     transferDate: input.transferDate.trim() || null,
     proofNote: input.proofNote.trim().slice(0, 500) || null,
@@ -344,7 +348,7 @@ export async function reviewBankTransfer(db: Database, adminEmail: string, id: s
     purpose: "topup",
     method: "bank",
     amountFen: row.amountFen,
-    currency: "USD",
+    currency: row.currency,
     status: "paid",
     checkoutId: null,
     shipmentId: null,
@@ -467,13 +471,14 @@ export async function retryHiobuyPayment(db: Database, paymentId: string) {
 export async function recordWalletShipmentPayment(db: Database, userId: string, checkoutId: string, amountFen: number) {
   const existing = (await db.select().from(payments).where(and(eq(payments.checkoutId, checkoutId), eq(payments.status, "paid"))))[0];
   if (existing) return;
+  const currency = await customerCurrency(db);
   await db.insert(payments).values({
     id: crypto.randomUUID(),
     userId,
     purpose: "shipment",
     method: "wallet",
     amountFen,
-    currency: "USD",
+    currency,
     status: "paid",
     checkoutId,
     shipmentId: null,

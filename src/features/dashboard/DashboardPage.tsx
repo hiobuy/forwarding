@@ -8,6 +8,7 @@ import type { Tone } from "../../domain/status";
 import { Button, CopyButton, ErrorState, Money, PageHeader, StatusBadge, Weight } from "../../components/ui";
 import { api } from "../../lib/api";
 import { authClient } from "../../lib/auth";
+import { useI18n } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import type { Dashboard } from "../../types/api";
 
@@ -27,6 +28,7 @@ function greeting() {
 }
 
 export function DashboardPage() {
+  const { t } = useI18n();
   const { data: session } = authClient.useSession();
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: () => api<Dashboard>("/api/dashboard") });
   const me = useQuery({ queryKey: ["me"], queryFn: () => api<{ isAdmin?: boolean; demoMode?: boolean }>("/api/me") });
@@ -48,8 +50,8 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title={firstName ? `${greeting()}, ${firstName}` : "Dashboard"}
-        subtitle={data.attention.length ? `${data.attention.length} ${data.attention.length === 1 ? "thing needs" : "things need"} your attention.` : "You're all caught up."}
+        title={firstName ? t("{greeting}, {name}", { greeting: t(greeting()), name: firstName }) : "Dashboard"}
+        subtitle={data.attention.length ? t(data.attention.length === 1 ? "{count} thing needs your attention." : "{count} things need your attention.", { count: data.attention.length }) : t("You're all caught up.")}
         action={
           <>
             <Button variant="secondary" to="/app/packages/pre-alert">

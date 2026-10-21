@@ -154,6 +154,18 @@ admin.post("/team/security", async (c) => {
   return ok(c, await noteSecurityEvent(c.get("db"), c.get("staff"), body.event, Boolean(account?.twoFactorEnabled)));
 });
 
+admin.get("/settings/locale", async (c) => {
+  const { adminLocaleSettings } = await import("./locale");
+  return ok(c, await adminLocaleSettings(c.get("db")));
+});
+admin.put("/settings/locale", async (c) => {
+  const body = parse(z.object({ enabled: z.array(z.string().max(32)).min(1).max(20), defaultLocale: z.string().max(32), currency: z.string().max(8) }), await c.req.json());
+  const { saveLocaleSettings } = await import("./locale");
+  const saved = await saveLocaleSettings(c.get("db"), c.get("user").id, body);
+  await recordAudit(c.get("db"), c.get("user"), "settings.locale", "locale", { enabled: body.enabled, defaultLocale: body.defaultLocale, currency: body.currency });
+  return ok(c, saved);
+});
+
 admin.get("/settings/advanced", async (c) => {
   const { advancedSettings } = await import("./advanced");
   return ok(c, await advancedSettings(c.get("db"), c.env, new URL(c.req.url).origin));

@@ -111,6 +111,8 @@ const RULES: { method?: string; re: RegExp; permission: Exclude<Gate, "deny"> }[
   { method: "PUT", re: /^\/settings\/hiobuy-webhook$/, permission: "secrets.write" },
   { method: "GET", re: /^\/settings\/hiobuy-webhook$/, permission: "fulfillment.read" },
   { method: "DELETE", re: /^\/settings\/hiobuy-webhook\/balance-alert$/, permission: "fulfillment.write" },
+  { method: "GET", re: /^\/settings\/locale$/, permission: "settings.read" },
+  { method: "PUT", re: /^\/settings\/locale$/, permission: "settings.write" },
   { method: "GET", re: /^\/settings\/tracking-events$/, permission: "settings.read" },
   { method: "PUT", re: /^\/settings\/tracking-events$/, permission: "settings.write" },
   { method: "GET", re: /^\/settings\/business$/, permission: "settings.read" },

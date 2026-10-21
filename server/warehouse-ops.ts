@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { CargoAttribute } from "../src/domain/status";
-import { appConfig } from "./config";
+import { customerCurrency } from "./locale";
 import type { Database } from "./db/client";
 import { charges, packageAttributes, packagePhotos, packages, shipmentPackages, shipments, user } from "./db/schema";
 import { snapshotPackedFreight } from "./earnings";
@@ -57,7 +57,7 @@ export async function packShipment(db: Database, id: string, input: { finalWeigh
   if (row.status !== "CONSOLIDATING" && row.status !== "WAITING_FOR_WEIGHT") throw new AppError("INVALID_STATE", `${row.publicId} has already been packed.`, 409);
   const now = Date.now();
   await db.delete(charges).where(and(eq(charges.shipmentId, row.id), eq(charges.type, "FREIGHT")));
-  await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: row.id, type: "FREIGHT", name: "International freight", amountFen: input.freightFen, currency: appConfig.currency, status: "DUE" });
+  await db.insert(charges).values({ id: crypto.randomUUID(), shipmentId: row.id, type: "FREIGHT", name: "International freight", amountFen: input.freightFen, currency: await customerCurrency(db), status: "DUE" });
   await db
     .update(shipments)
     .set({

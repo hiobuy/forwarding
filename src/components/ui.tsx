@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, ArrowLeft, Check, Eye, EyeOff, ChevronLeft, ChevronRight, CircleAlert, Copy, Info, Inbox, Loader2, RotateCw, Search, X } from "lucide-react";
-import { forwardRef, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { Children, forwardRef, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router";
-import { formatFen, formatFenRange, formatSignedFen } from "../domain/money";
+import { translateActive, useI18n } from "../lib/i18n";
 import { cargoLabel, type CargoAttribute, type Tone } from "../domain/status";
 import { formatCm, formatDimensions, formatKg } from "../domain/units";
 import { usePageTitle } from "../lib/brand";
@@ -11,7 +11,11 @@ import { useToast } from "./toast";
 
 /** "1 package", "3 packages". */
 export function plural(count: number, one: string, many = `${one}s`) {
-  return `${count} ${count === 1 ? one : many}`;
+  return `${count} ${translateActive(count === 1 ? one : many)}`;
+}
+
+function textNodes(children: ReactNode, t: (text: string, vars?: Record<string, string | number>) => string) {
+  return Children.map(children, (child) => (typeof child === "string" ? t(child) : child));
 }
 
 const tones: Record<Tone, string> = {
@@ -68,6 +72,7 @@ const dotOverride: Record<string, string> = {
 };
 
 export function StatusBadge({ label, tone, statusKey, className }: { label: string; tone: Tone; statusKey?: string; className?: string }) {
+  const { t } = useI18n();
   const resolved = (statusKey && statusTone[statusKey]) || tone;
   const style = (statusKey && statusOverride[statusKey]) || tones[resolved];
   const dot = (statusKey && dotOverride[statusKey]) || toneDot[resolved];
@@ -80,12 +85,13 @@ export function StatusBadge({ label, tone, statusKey, className }: { label: stri
       )}
     >
       <span className={cn("size-1.5 rounded-full", dot)} aria-hidden="true" />
-      {label}
+      {t(label)}
     </span>
   );
 }
 
 export function CargoBadge({ attribute }: { attribute: CargoAttribute }) {
+  const { t } = useI18n();
   const special = attribute !== "GENERAL";
   return (
     <span
@@ -94,17 +100,21 @@ export function CargoBadge({ attribute }: { attribute: CargoAttribute }) {
         special ? "bg-amber-50 text-amber-800 ring-1 ring-amber-600/15 ring-inset" : "bg-slate-100 text-slate-600",
       )}
     >
-      {cargoLabel(attribute)}
+      {t(cargoLabel(attribute))}
     </span>
   );
 }
 
 export function Money({ fen, signed = false }: { fen: number; signed?: boolean }) {
-  return <span className="tabular-nums">{signed ? formatSignedFen(fen) : formatFen(fen)}</span>;
+  const { format } = useI18n();
+  return <span className="tabular-nums">{format(fen, { signed })}</span>;
 }
 
 export function MoneyRange({ min, max }: { min: number; max: number }) {
-  return <span className="tabular-nums">{formatFenRange(min, max)}</span>;
+  const { format } = useI18n();
+  const start = format(min);
+  const end = format(max);
+  return <span className="tabular-nums">{start === end ? start : `${start}–${end}`}</span>;
 }
 
 export function Weight({ grams }: { grams: number | null }) {
@@ -126,6 +136,8 @@ export const Button = forwardRef<
   HTMLButtonElement,
   ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: "sm" | "md" | "lg"; to?: string; loading?: boolean }
 >(function Button({ variant = "primary", size = "md", className = "", to, loading = false, children, disabled, ...props }, ref) {
+  const { t } = useI18n();
+  const label = textNodes(children, t);
   const styles = {
     primary: "bg-brand text-white shadow-[0_1px_2px_rgba(67,56,202,0.3),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-dark active:bg-indigo-800 disabled:bg-indigo-300 disabled:shadow-none",
     secondary: "border border-slate-200 bg-white text-slate-700 shadow-[0_1px_2px_rgba(16,24,40,0.05)] hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-white",
@@ -147,7 +159,7 @@ export const Button = forwardRef<
   const content = (
     <>
       {loading ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
-      {children}
+      {label}
     </>
   );
   if (to) {
@@ -202,6 +214,7 @@ export function SectionHeading({
   tone?: "indigo" | "emerald" | "sky" | "amber" | "rose" | "slate";
   action?: ReactNode;
 }) {
+  const { t } = useI18n();
   const iconTone = {
     indigo: "bg-indigo-50 text-indigo-600",
     emerald: "bg-emerald-50 text-emerald-700",
@@ -218,7 +231,7 @@ export function SectionHeading({
             <Icon size={15} aria-hidden="true" />
           </span>
         ) : null}
-        <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
+        <h2 className="text-[13px] font-semibold tracking-tight">{t(title)}</h2>
       </div>
       {action}
     </div>
@@ -242,18 +255,19 @@ export function Field({
   optional?: boolean;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <label className="block text-[13px] font-medium text-slate-800">
-      {label}
-      {optional ? <span className="ml-1.5 font-normal text-slate-400">Optional</span> : null}
+      {t(label)}
+      {optional ? <span className="ml-1.5 font-normal text-slate-400">{t("Optional")}</span> : null}
       <div className="mt-1.5">{children}</div>
       {error ? (
         <span className="mt-1.5 flex items-center gap-1 text-[13px] font-normal text-red-700">
           <CircleAlert size={13} aria-hidden="true" />
-          {error}
+          {t(error)}
         </span>
       ) : null}
-      {hint && !error ? <span className="mt-1.5 block text-[13px] leading-5 font-normal text-slate-500">{hint}</span> : null}
+      {hint && !error ? <span className="mt-1.5 block text-[13px] leading-5 font-normal text-slate-500">{t(hint)}</span> : null}
     </label>
   );
 }
@@ -274,22 +288,24 @@ export function PageHeader({
   back?: { to: string; label: string };
   badge?: ReactNode;
 }) {
-  usePageTitle(title);
+  const { t } = useI18n();
+  const heading = t(title);
+  usePageTitle(heading);
   return (
     <div className="mb-6">
       {back ? (
         <Link to={back.to} className="mb-3 inline-flex items-center gap-1 rounded-md text-[13px] font-medium text-slate-500 transition-colors hover:text-ink">
           <ArrowLeft size={14} aria-hidden="true" />
-          {back.label}
+          {t(back.label)}
         </Link>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-[1.6rem] leading-tight font-semibold tracking-tight text-ink">{title}</h1>
+            <h1 className="text-[1.6rem] leading-tight font-semibold tracking-tight text-ink">{heading}</h1>
             {badge}
           </div>
-          {subtitle ? <p className="mt-1 max-w-2xl text-[13px] leading-5 text-slate-500">{subtitle}</p> : null}
+          {subtitle ? <p className="mt-1 max-w-2xl text-[13px] leading-5 text-slate-500">{typeof subtitle === "string" ? t(subtitle) : subtitle}</p> : null}
         </div>
         {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
       </div>
@@ -306,6 +322,7 @@ export function FilterBar({
   options: readonly { key: string; label: string; count?: number }[];
   onChange: (key: string) => void;
 }) {
+  const { t } = useI18n();
   const counted = options.some((option) => option.count != null);
   return (
     <div className="scroll-area -mx-4 mb-4 overflow-x-auto px-4 md:mx-0 md:px-0" role="tablist">
@@ -326,7 +343,7 @@ export function FilterBar({
               onClick={() => onChange(option.key)}
             >
               {option.count != null ? <span className={cn("block text-center text-[13px] leading-none font-semibold tabular-nums", !option.count && !active && "text-slate-300")}>{option.count}</span> : null}
-              <span className={option.count != null ? "mt-1 block text-[12px]" : "text-[13px]"}>{option.label}</span>
+              <span className={option.count != null ? "mt-1 block text-[12px]" : "text-[13px]"}>{t(option.label)}</span>
             </button>
           );
         })}
@@ -351,6 +368,7 @@ export function SearchInput({
   className?: string;
   size?: "sm" | "md";
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState(defaultValue);
   useEffect(() => {
     setValue(defaultValue);
@@ -375,8 +393,8 @@ export function SearchInput({
             onSearch("");
           }
         }}
-        placeholder={placeholder}
-        aria-label={label}
+        placeholder={t(placeholder)}
+        aria-label={t(label)}
         type="search"
         enterKeyHint="search"
       />
@@ -384,7 +402,7 @@ export function SearchInput({
         <button
           type="button"
           className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-          aria-label="Clear search"
+          aria-label={t("Clear search")}
           onClick={() => {
             setValue("");
             onSearch("");
@@ -397,7 +415,8 @@ export function SearchInput({
   );
 }
 
-export function Pagination({ page, pageSize, total, onChange, className }: { page: number; pageSize: number; total: number; onChange: (page: number) => void; className?: string }) {
+export function Pagination({ page, pageSize, total, onChange, className }: { page: number; pageSize: number; total: number;   onChange: (page: number) => void; className?: string }) {
+  const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (total === 0) return null;
   const from = (page - 1) * pageSize + 1;
@@ -405,14 +424,14 @@ export function Pagination({ page, pageSize, total, onChange, className }: { pag
   return (
     <div className={cn("mt-3 flex items-center justify-between gap-3 text-[13px] text-slate-500", className)}>
       <span className="tabular-nums">
-        {from}–{to} of {total}
+        {t("{from}–{to} of {total}", { from, to, total })}
       </span>
       {pages > 1 ? (
         <div className="flex items-center gap-1">
-          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)} aria-label="Previous page">
+          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)} aria-label={t("Previous page")}>
             <ChevronLeft size={14} /> Previous
           </Button>
-          <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onChange(page + 1)} aria-label="Next page">
+          <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onChange(page + 1)} aria-label={t("Next page")}>
             Next <ChevronRight size={14} />
           </Button>
         </div>
@@ -422,22 +441,24 @@ export function Pagination({ page, pageSize, total, onChange, className }: { pag
 }
 
 export function EmptyState({ title, body, action, icon: Icon = Inbox }: { title: string; body: string; action?: ReactNode; icon?: LucideIcon }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
       <span className="mx-auto grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-500">
         <Icon size={20} aria-hidden="true" />
       </span>
-      <h2 className="mt-4 text-[15px] font-semibold tracking-tight">{title}</h2>
-      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-5 text-slate-500">{body}</p>
+      <h2 className="mt-4 text-[15px] font-semibold tracking-tight">{t(title)}</h2>
+      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-5 text-slate-500">{t(body)}</p>
       {action ? <div className="mt-5 flex justify-center gap-2">{action}</div> : null}
     </div>
   );
 }
 
 export function LoadingBlock({ label = "Loading", rows = 3 }: { label?: string; rows?: number }) {
+  const { t } = useI18n();
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white" role="status" aria-live="polite">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{t(label)}</span>
       {Array.from({ length: rows }).map((_, index) => (
         <div key={index} className="flex items-center gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0">
           <div className="flex-1 space-y-2">
@@ -452,11 +473,12 @@ export function LoadingBlock({ label = "Loading", rows = 3 }: { label?: string; 
 }
 
 export function ErrorState({ message, onRetry, action }: { message: string; onRetry?: () => void; action?: ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/70 p-4 text-sm text-red-900" role="alert">
       <AlertTriangle size={18} className="mt-0.5 shrink-0 text-red-600" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="font-medium">{message}</p>
+        <p className="font-medium">{t(message)}</p>
         {onRetry || action ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {onRetry ? (
@@ -576,6 +598,7 @@ export function Dialog({
   size?: "md" | "lg" | "xl";
   spacious?: boolean;
 }) {
+  const { t } = useI18n();
   const titleId = useId();
   useDialogKeys(open, onClose);
   if (!open) return null;
@@ -594,11 +617,11 @@ export function Dialog({
         <div className={cn("flex items-start justify-between gap-3", spacious ? "px-6 pt-5 pb-2" : "border-b border-slate-100 px-5 py-4")}>
           <div>
             <h2 id={titleId} className="text-base font-semibold tracking-tight">
-              {title}
+              {t(title)}
             </h2>
-            {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
+            {description ? <p className="mt-0.5 text-[13px] text-slate-500">{t(description)}</p> : null}
           </div>
-          <button type="button" className={cn("grid size-8 place-items-center text-slate-500 hover:bg-slate-100 hover:text-slate-800", spacious ? "rounded-full border border-slate-200" : "-mr-1.5 rounded-lg text-slate-400")} aria-label="Close" onClick={onClose}>
+          <button type="button" className={cn("grid size-8 place-items-center text-slate-500 hover:bg-slate-100 hover:text-slate-800", spacious ? "rounded-full border border-slate-200" : "-mr-1.5 rounded-lg text-slate-400")} aria-label={t("Close")} onClick={onClose}>
             <X size={16} />
           </button>
         </div>
@@ -631,6 +654,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
@@ -659,12 +683,14 @@ export function ConfirmDialog({
           </span>
           <div>
             <h2 id={titleId} className="text-base font-semibold tracking-tight">
-              {title}
+              {t(title)}
             </h2>
-            <p className="mt-1.5 text-[13px] leading-5 text-slate-600">{body}</p>
+            <p className="mt-1.5 text-[13px] leading-5 text-slate-600">{t(body)}</p>
             {confirmPhrase ? (
               <label className="mt-3 block text-[13px] text-slate-700">
-                Type <span className="font-mono font-medium text-ink">{confirmPhrase}</span> to confirm
+                {t("Type {phrase} to confirm", { phrase: confirmPhrase }).split(confirmPhrase)[0]}
+                <span className="font-mono font-medium text-ink">{confirmPhrase}</span>
+                {t("Type {phrase} to confirm", { phrase: confirmPhrase }).split(confirmPhrase)[1]}
                 <input ref={inputRef} className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 px-3 font-mono text-[13px] outline-none focus:border-slate-400" value={typed} autoComplete="off" onChange={(event) => setTyped(event.target.value)} />
               </label>
             ) : null}
@@ -696,7 +722,8 @@ export function PhotoGallery({ photos = [] }: { photos?: { id: string; type: str
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [active, photos.length]);
-  if (photos.length === 0) return <p className="text-[13px] text-slate-500">No photos yet. They appear after the warehouse handles the parcel.</p>;
+  const { t } = useI18n();
+  if (photos.length === 0) return <p className="text-[13px] text-slate-500">{t("No photos yet. They appear after the warehouse handles the parcel.")}</p>;
   const current = active == null ? null : photos[active];
   return (
     <>
@@ -739,10 +766,10 @@ export function PhotoGallery({ photos = [] }: { photos?: { id: string; type: str
                 </p>
               </div>
               <div className="flex gap-1.5">
-                <Button variant="secondary" size="sm" className="w-8 px-0" disabled={active === 0} onClick={() => setActive(active - 1)} aria-label="Previous photo">
+                <Button variant="secondary" size="sm" className="w-8 px-0" disabled={active === 0} onClick={() => setActive(active - 1)} aria-label={t("Previous photo")}>
                   <ChevronLeft size={15} />
                 </Button>
-                <Button variant="secondary" size="sm" className="w-8 px-0" disabled={active === photos.length - 1} onClick={() => setActive(active + 1)} aria-label="Next photo">
+                <Button variant="secondary" size="sm" className="w-8 px-0" disabled={active === photos.length - 1} onClick={() => setActive(active + 1)} aria-label={t("Next photo")}>
                   <ChevronRight size={15} />
                 </Button>
                 <Button variant="secondary" size="sm" onClick={close}>
@@ -759,15 +786,17 @@ export function PhotoGallery({ photos = [] }: { photos?: { id: string; type: str
 
 /** A label / value row for description lists. */
 export function DataRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <dt className="text-[13px] text-slate-500">{label}</dt>
+      <dt className="text-[13px] text-slate-500">{t(label)}</dt>
       <dd className={cn("text-right text-[13px] tabular-nums", strong ? "font-semibold text-ink" : "font-medium text-slate-800")}>{value}</dd>
     </div>
   );
 }
 
 export function PasswordInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  const { t } = useI18n();
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -775,7 +804,7 @@ export function PasswordInput({ className, ...props }: InputHTMLAttributes<HTMLI
       <button
         type="button"
         className="absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-        aria-label={show ? "Hide password" : "Show password"}
+        aria-label={show ? t("Hide password") : t("Show password")}
         onClick={() => setShow((value) => !value)}
       >
         {show ? <EyeOff size={15} /> : <Eye size={15} />}

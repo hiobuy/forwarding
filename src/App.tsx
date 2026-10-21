@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from "react-router";
 import { brandHomeHref, homeDecision } from "./domain/site";
 import { BrandLockup, marketingAccent, useBrand, useSiteMode } from "./lib/brand";
+import { LocaleSwitch, useI18n } from "./lib/i18n";
 import { authClient } from "./lib/auth";
 import { AppShell } from "./layouts/AppShell";
 import { AccountPage } from "./features/account/AccountPage";
@@ -34,9 +35,10 @@ import { AdminGuide } from "./features/admin/AdminGuide";
 import { AdminUsers } from "./features/admin/AdminUsers";
 
 function FullScreenStatus({ label }: { label: string }) {
+  const { t } = useI18n();
   return (
     <div className="grid min-h-screen place-items-center text-sm text-slate-500" role="status">
-      {label}
+      {t(label)}
     </div>
   );
 }
@@ -56,6 +58,7 @@ function GuestOnly() {
 }
 
 function AuthOutlet() {
+  const { t } = useI18n();
   const brand = useBrand();
   const site = useSiteMode();
   const { data } = authClient.useSession();
@@ -63,7 +66,7 @@ function AuthOutlet() {
   const help = brand.supportEmail ? `mailto:${brand.supportEmail}` : brand.website.supportUrl || "";
   return (
     <div className="flex min-h-dvh flex-col bg-slate-50 text-slate-800 lg:flex-row" style={marketingAccent(brand)}>
-      <aside aria-label="How forwarding works" className="auth-grid relative flex min-h-[420px] flex-1 flex-col justify-between overflow-hidden p-8 text-white sm:p-12 lg:min-h-dvh lg:p-16">
+      <aside aria-label={t("How forwarding works")} className="auth-grid relative flex min-h-[420px] flex-1 flex-col justify-between overflow-hidden p-8 text-white sm:p-12 lg:min-h-dvh lg:p-16">
         <div aria-hidden="true" className="pointer-events-none absolute -top-32 -left-32 size-96 rounded-full bg-teal-500/10 blur-3xl" />
         <div aria-hidden="true" className="pointer-events-none absolute right-0 -bottom-32 h-[480px] w-[480px] rounded-full bg-teal-600/15 blur-[120px]" />
         <div className="relative z-10">
@@ -72,26 +75,27 @@ function AuthOutlet() {
         <div className="relative z-10 my-10 max-w-xl lg:my-0">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-500/20 bg-teal-900/40 px-3 py-1.5 text-xs font-medium text-teal-300">
             <span className="size-2 animate-pulse rounded-full bg-teal-400" />
-            China warehouse address
+            {t("China warehouse address")}
           </div>
           <h1 className="text-3xl leading-[1.18] font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Your China warehouse,{" "}
-            <span className="bg-gradient-to-r from-teal-200 via-teal-100 to-emerald-300 bg-clip-text text-transparent">then the shipment.</span>
+            {t("Your China warehouse,")}{" "}
+            <span className="bg-gradient-to-r from-teal-200 via-teal-100 to-emerald-300 bg-clip-text text-transparent">{t("then the shipment.")}</span>
           </h1>
-          <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg">Add domestic parcels, consolidate what is ready, and pay freight after the warehouse finishes packing.</p>
+          <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg">{t("Add domestic parcels, consolidate what is ready, and pay freight after the warehouse finishes packing.")}</p>
         </div>
         <ol className="relative z-10 grid grid-cols-1 gap-6 border-t border-slate-800/80 pt-8 md:grid-cols-3">
-          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">01</span><p className="mt-2 text-sm font-medium text-slate-300">Copy the warehouse address with your member code.</p></li>
-          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">02</span><p className="mt-2 text-sm font-medium text-slate-300">Add the package with its tracking number before it arrives.</p></li>
-          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">03</span><p className="mt-2 text-sm font-medium text-slate-300">Consolidate, then pay the final freight from your wallet.</p></li>
+          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">01</span><p className="mt-2 text-sm font-medium text-slate-300">{t("Copy the warehouse address with your member code.")}</p></li>
+          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">02</span><p className="mt-2 text-sm font-medium text-slate-300">{t("Add the package with its tracking number before it arrives.")}</p></li>
+          <li><span className="font-mono text-xs font-semibold tracking-wider text-teal-400">03</span><p className="mt-2 text-sm font-medium text-slate-300">{t("Consolidate, then pay the final freight from your wallet.")}</p></li>
         </ol>
       </aside>
       <main className="flex flex-1 flex-col justify-between bg-white px-6 py-8 sm:px-12 lg:px-16">
         <div className="flex items-center justify-end gap-4 text-xs font-medium text-slate-500">
+          <LocaleSwitch tone="muted" />
           {help ? (
             <a className="inline-flex items-center gap-1.5 hover:text-[#087b73]" href={help}>
               <Ms name="help" className="text-[16px] text-slate-400" />
-              Need help?
+              {t("Need help?")}
             </a>
           ) : null}
         </div>
@@ -132,15 +136,16 @@ function OpenAuth() {
 }
 
 function HomeRoute() {
+  const { t } = useI18n();
   const site = useSiteMode();
   const { data, isPending } = authClient.useSession();
   if (site.failed) {
     return (
       <div className="grid min-h-screen place-items-center px-6 text-center">
         <div>
-          <p className="text-sm text-slate-600">Could not load site settings.</p>
+          <p className="text-sm text-slate-600">{t("Could not load site settings.")}</p>
           <button type="button" className="mt-3 text-sm font-medium text-ink underline" onClick={site.retry}>
-            Try again
+            {t("Try again")}
           </button>
         </div>
       </div>
