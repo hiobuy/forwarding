@@ -4,6 +4,7 @@
  * A 250 after DATA means the server accepted the message. It is not a delivery receipt.
  */
 import { connect } from "cloudflare:sockets";
+import { takeSmtpReply } from "./smtp-reply";
 
 type Socket = ReturnType<typeof connect>;
 
@@ -21,6 +22,8 @@ export type SmtpConfig = {
 };
 
 type Reply = { code: number; text: string };
+
+const STEP_TIMEOUT_MS = 20_000;
 
 export async function testSmtp(config: SmtpConfig) {
   const session = await openSmtp(config);
@@ -51,33 +54,66 @@ export async function sendSmtp(config: SmtpConfig, message: { to: string; subjec
 async function openSmtp(config: SmtpConfig) {
   const socket = connect(
     { hostname: config.host, port: config.port },
-    { secureTransport: config.encryption === "tls" ? "on" : config.encryption === "starttls" ? "starttls" : "off", allowHalfOpen: false },
+    { secureTransport: config.encryption === "tls" ? "on" : "starttls", allowHalfOpen: true },
   );
+  await waitUntilOpen(socket, `${config.host}:${config.port}`);
   let session = new SmtpSession(socket);
   const greeting = await session.read();
   if (greeting.code !== 220) throw new Error(greeting.text || "The mail server did not greet us.");
-  const ehlo = config.senderEmail.split("@")[1] || "localhost";
-  await session.command(`EHLO ${ehlo}`);
+  const ehloName = ehloHostname(config.senderEmail);
+  await session.command(`EHLO ${ehloName}`);
   if (config.encryption === "starttls") {
     await session.command("STARTTLS");
-    session.closeWriters();
-    session = new SmtpSession(socket.startTls());
-    await session.command(`EHLO ${ehlo}`);
+    const secure = session.releaseForTls();
+    await waitUntilOpen(secure, `${config.host}:${config.port}`);
+    session = new SmtpSession(secure);
+    await session.command(`EHLO ${ehloName}`);
   }
   await session.command("AUTH LOGIN");
-  await session.command(btoa(config.username));
-  const auth = await session.command(btoa(config.password));
-  if (auth.code !== 235) throw new Error("SMTP authentication failed.");
+  await session.command(encodeSmtpToken(config.username));
+  const auth = await session.command(encodeSmtpToken(config.password));
+  if (auth.code !== 235) throw new Error(auth.text || "SMTP authentication failed.");
   return session;
+}
+
+function ehloHostname(senderEmail: string) {
+  const domain = senderEmail.split("@")[1]?.trim().toLowerCase() || "";
+  if (/^[a-z0-9.-]+$/.test(domain) && domain.includes(".")) return domain;
+  return "localhost";
+}
+
+/** AUTH LOGIN sends each token as Latin-1 base64. API tokens are ASCII. */
+function encodeSmtpToken(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function waitUntilOpen(socket: Socket, label: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      socket.opened,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out connecting to ${label}.`)), STEP_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (error) {
+    socket.close().catch(() => undefined);
+    const message = error instanceof Error ? error.message : "The connection failed.";
+    throw new Error(message.startsWith("Timed out") ? message : `Could not connect to ${label}: ${message}`);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 class SmtpSession {
   private reader: ReadableStreamDefaultReader<Uint8Array>;
-  private writer: WritableStreamDefaultWriter<Uint8Array>;
+  private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
   private buffer = "";
-  constructor(socket: Socket) {
+  constructor(private socket: Socket) {
     this.reader = socket.readable.getReader();
-    this.writer = socket.writable.getWriter();
   }
   async command(line: string) {
     await this.write(`${line}\r\n`);
@@ -86,34 +122,50 @@ class SmtpSession {
     return reply;
   }
   async write(value: string) {
+    if (!this.writer) this.writer = this.socket.writable.getWriter();
     await this.writer.write(new TextEncoder().encode(value));
   }
   async read(): Promise<Reply> {
-    const deadline = Date.now() + 15_000;
+    const deadline = Date.now() + STEP_TIMEOUT_MS;
     while (Date.now() < deadline) {
-      const lines = this.buffer.split("\r\n");
-      const complete = lines.slice(0, -1);
-      const last = complete.at(-1);
-      if (last && last.length >= 4 && last[3] === " ") {
-        this.buffer = lines.at(-1) ?? "";
-        return { code: Number(last.slice(0, 3)), text: complete.join(" ") };
+      const parsed = takeSmtpReply(this.buffer);
+      if (parsed) {
+        this.buffer = parsed.rest;
+        return parsed.reply;
       }
-      const next = await Promise.race([
-        this.reader.read(),
-        new Promise<ReadableStreamReadResult<Uint8Array>>((resolve) => setTimeout(() => resolve({ done: true, value: undefined }), Math.max(1, deadline - Date.now()))),
+      const remaining = Math.max(1, deadline - Date.now());
+      const read = this.reader.read().then(
+        (value) => ({ kind: "read" as const, value }),
+        (error: unknown) => ({ kind: "error" as const, error }),
+      );
+      const closed = this.socket.closed.then(
+        () => ({ kind: "closed" as const, error: undefined }),
+        (error: unknown) => ({ kind: "closed" as const, error }),
+      );
+      const result = await Promise.race([
+        read,
+        closed,
+        new Promise<{ kind: "timeout" }>((resolve) => setTimeout(() => resolve({ kind: "timeout" }), remaining)),
       ]);
-      if (next.done) break;
-      this.buffer += new TextDecoder().decode(next.value, { stream: true });
+      if (result.kind === "timeout") throw new Error("The mail server did not respond in time.");
+      if (result.kind === "error" || result.kind === "closed") {
+        const detail = result.error instanceof Error ? result.error.message : "";
+        throw new Error(detail ? `The mail server closed the connection: ${detail}` : "The mail server closed the connection.");
+      }
+      if (result.value.done) throw new Error("The mail server closed the connection.");
+      this.buffer += new TextDecoder().decode(result.value.value, { stream: true });
     }
     throw new Error("The mail server did not respond in time.");
   }
-  closeWriters() {
+  releaseForTls() {
     this.reader.releaseLock();
-    this.writer.releaseLock();
+    this.writer?.releaseLock();
+    return this.socket.startTls();
   }
   close() {
     this.reader.cancel().catch(() => undefined);
-    this.writer.abort().catch(() => undefined);
+    this.writer?.abort().catch(() => undefined);
+    this.socket.close().catch(() => undefined);
   }
 }
 

@@ -16,5 +16,6 @@
     "types": ["@cloudflare/workers-types"],
     "jsx": "react-jsx"
   },
-  "include": ["server", "src/domain", "src/types", "src/mocks", "worker-configuration.d.ts"]
+  "include": ["server", "src/domain", "src/types", "src/mocks", "worker-configuration.d.ts"],
+  "exclude": ["server/deploy-config.test.ts", "server/email/smtp-reply.test.ts"]
 }

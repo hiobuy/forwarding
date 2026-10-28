@@ -1,9 +1,9 @@
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { stripeKeyModeProblem } from "../src/domain/payments";
 import type { Database } from "./db/client";
 import { SINGLETON_ID, singletonRow } from "./db/singleton";
-import { bankTransfers, charges, checkouts, paymentEvents, paymentSettings, payments, refundRecords, shipments, user } from "./db/schema";
+import { bankAccounts, bankTransfers, charges, checkouts, paymentEvents, paymentSettings, payments, refundRecords, shipments, user } from "./db/schema";
 import { decryptSecret, encryptSecret } from "./email/crypto";
 import { notify } from "./notify";
 import { moveWallet } from "./wallet";
@@ -18,27 +18,49 @@ function authSecret(env: PayEnv) {
   return env.BETTER_AUTH_SECRET;
 }
 
+export type BankAccountInput = {
+  id: string;
+  label: string;
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  swift: string;
+  country: string;
+  currency: string;
+  instructions: string;
+};
+
+function presentBankAccount(row: typeof bankAccounts.$inferSelect): BankAccountInput {
+  return {
+    id: row.id,
+    label: row.label ?? "",
+    bankName: row.bankName,
+    accountHolder: row.accountHolder,
+    accountNumber: row.accountNumber,
+    swift: row.swift ?? "",
+    country: row.country ?? "",
+    currency: row.currency || "USD",
+    instructions: row.instructions ?? "",
+  };
+}
+
+async function listBankAccounts(db: Database) {
+  const rows = await db.select().from(bankAccounts).orderBy(asc(bankAccounts.sortOrder), asc(bankAccounts.createdAt));
+  return rows.map(presentBankAccount);
+}
+
 export async function paymentOptions(db: Database) {
   const row = await settingsRow(db);
-  const bankReady = Boolean(row.bankEnabled && row.bankName && row.accountHolder && row.accountNumber);
+  const accounts = row.bankEnabled ? await listBankAccounts(db) : [];
   const stripeReady = Boolean(row.stripeEnabled && row.stripePublishableKey && row.stripeSecretCiphertext);
   return {
     currency: await customerCurrency(db),
     stripe: stripeReady,
     publishableKey: stripeReady ? row.stripePublishableKey : null,
     cardTopup: Boolean(stripeReady && row.cardTopupEnabled),
-    bank: bankReady,
-    bankDetails: bankReady
-      ? {
-          bankName: row.bankName,
-          accountHolder: row.accountHolder,
-          accountNumber: row.accountNumber,
-          swift: row.swift,
-          country: row.bankCountry,
-          currency: row.bankCurrency,
-          instructions: row.bankInstructions,
-        }
-      : null,
+    bank: accounts.length > 0,
+    bankAccounts: accounts,
+    bankDetails: accounts[0] ?? null,
     minTopupFen: row.minTopupFen,
     maxTopupFen: row.maxTopupFen,
   };
@@ -47,7 +69,9 @@ export async function paymentOptions(db: Database) {
 export async function publicPaymentSettings(db: Database) {
   const row = await settingsRow(db);
   const stripeReady = Boolean(row.stripeEnabled && row.stripePublishableKey && row.stripeSecretCiphertext && row.stripeWebhookCiphertext);
-  const bankReady = Boolean(row.bankEnabled && row.bankName && row.accountHolder && row.accountNumber);
+  const accounts = await listBankAccounts(db);
+  const bankReady = Boolean(row.bankEnabled && accounts.length);
+  const first = accounts[0];
   return {
     stripeEnabled: row.stripeEnabled,
     stripeMode: row.stripeMode === "live" ? "live" : "test",
@@ -59,16 +83,17 @@ export async function publicPaymentSettings(db: Database) {
     maxTopupFen: row.maxTopupFen,
     dailyTopupFen: row.dailyTopupFen,
     bankEnabled: row.bankEnabled,
-    bankName: row.bankName ?? "",
-    accountHolder: row.accountHolder ?? "",
-    accountNumber: row.accountNumber ?? "",
-    swift: row.swift ?? "",
-    bankCountry: row.bankCountry ?? "",
-    bankCurrency: row.bankCurrency || "USD",
-    bankInstructions: row.bankInstructions ?? "",
+    bankAccounts: accounts,
+    bankName: first?.bankName ?? "",
+    accountHolder: first?.accountHolder ?? "",
+    accountNumber: first?.accountNumber ?? "",
+    swift: first?.swift ?? "",
+    bankCountry: first?.country ?? "",
+    bankCurrency: first?.currency || "USD",
+    bankInstructions: first?.instructions ?? "",
     status: {
       stripe: stripeReady ? "Connected" : "Not configured",
-      bank: bankReady ? "Enabled" : "Disabled",
+      bank: bankReady ? (accounts.length === 1 ? "Enabled" : `${accounts.length} accounts`) : "Disabled",
       cardTopup: row.cardTopupEnabled ? "Enabled" : "Disabled",
     },
   };
@@ -88,18 +113,30 @@ export async function savePaymentSettings(
     maxTopupFen: number;
     dailyTopupFen: number;
     bankEnabled: boolean;
-    bankName: string;
-    accountHolder: string;
-    accountNumber: string;
-    swift: string;
-    bankCountry: string;
-    bankCurrency: string;
-    bankInstructions: string;
+    bankAccounts: BankAccountInput[];
   },
 ) {
   if (input.minTopupFen < 100 || input.maxTopupFen < input.minTopupFen || input.dailyTopupFen < input.maxTopupFen) {
     throw new AppError("VALIDATION_ERROR", "Check the top-up limits. Daily limit must cover the maximum.");
   }
+  if (input.bankAccounts.length > 10) throw new AppError("VALIDATION_ERROR", "You can save up to 10 bank accounts.");
+  const accounts = input.bankAccounts
+    .map((account) => ({
+      id: account.id.trim() || crypto.randomUUID(),
+      label: account.label.trim(),
+      bankName: account.bankName.trim(),
+      accountHolder: account.accountHolder.trim(),
+      accountNumber: account.accountNumber.trim(),
+      swift: account.swift.trim(),
+      country: account.country.trim(),
+      currency: (account.currency.trim() || "USD").toUpperCase(),
+      instructions: account.instructions.trim(),
+    }))
+    .filter((account) => account.label || account.bankName || account.accountHolder || account.accountNumber || account.swift || account.country || account.instructions);
+  if (accounts.some((account) => !account.bankName || !account.accountHolder || !account.accountNumber)) {
+    throw new AppError("VALIDATION_ERROR", "Each bank account needs a bank name, account holder, and account number.");
+  }
+  if (input.bankEnabled && accounts.length === 0) throw new AppError("VALIDATION_ERROR", "Add a bank account before enabling bank transfer.");
   const current = await settingsRow(db);
   const secret = input.secretKey.trim() ? input.secretKey.trim() : current.stripeSecretCiphertext ? await decryptSecret(authSecret(env), current.stripeSecretCiphertext).catch(() => "") : "";
   const publishable = input.publishableKey.trim();
@@ -116,16 +153,36 @@ export async function savePaymentSettings(
     maxTopupFen: input.maxTopupFen,
     dailyTopupFen: input.dailyTopupFen,
     bankEnabled: input.bankEnabled,
-    bankName: input.bankName.trim() || null,
-    accountHolder: input.accountHolder.trim() || null,
-    accountNumber: input.accountNumber.trim() || null,
-    swift: input.swift.trim() || null,
-    bankCountry: input.bankCountry.trim() || null,
-    bankCurrency: "USD",
-    bankInstructions: input.bankInstructions.trim() || null,
+    bankName: accounts[0]?.bankName ?? null,
+    accountHolder: accounts[0]?.accountHolder ?? null,
+    accountNumber: accounts[0]?.accountNumber ?? null,
+    swift: accounts[0]?.swift ?? null,
+    bankCountry: accounts[0]?.country ?? null,
+    bankCurrency: accounts[0]?.currency || "USD",
+    bankInstructions: accounts[0]?.instructions ?? null,
     updatedAt: Date.now(),
   };
   await db.update(paymentSettings).set(values).where(eq(paymentSettings.id, SINGLETON_ID));
+  await db.delete(bankAccounts);
+  const now = Date.now();
+  if (accounts.length) {
+    await db.insert(bankAccounts).values(
+      accounts.map((account, index) => ({
+        id: account.id,
+        label: account.label || null,
+        bankName: account.bankName,
+        accountHolder: account.accountHolder,
+        accountNumber: account.accountNumber,
+        swift: account.swift || null,
+        country: account.country || null,
+        currency: account.currency.slice(0, 8) || "USD",
+        instructions: account.instructions || null,
+        sortOrder: index,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+  }
   return publicPaymentSettings(db);
 }
 
@@ -257,11 +314,14 @@ export async function createBankTransfer(
   db: Database,
   bucket: R2Bucket | undefined,
   userId: string,
-  input: { amountFen: number; reference: string; transferDate: string; proofNote: string },
+  input: { amountFen: number; reference: string; transferDate: string; proofNote: string; bankAccountId: string },
   proof: File | null,
 ) {
   const settings = await settingsRow(db);
   if (!settings.bankEnabled) throw new AppError("VALIDATION_ERROR", "Bank transfer is not available.");
+  const accounts = await listBankAccounts(db);
+  const chosen = accounts.find((account) => account.id === input.bankAccountId) ?? (accounts.length === 1 ? accounts[0] : undefined);
+  if (!chosen) throw new AppError("VALIDATION_ERROR", "Choose the bank account you paid.");
   if (input.amountFen < settings.minTopupFen || input.amountFen > settings.maxTopupFen) throw new AppError("VALIDATION_ERROR", "That amount is outside the allowed top-up range.");
   if (!input.reference.trim()) throw new AppError("VALIDATION_ERROR", "Enter the account you paid from.");
   const ext = proof ? PROOF_TYPES.get(proof.type) : undefined;
@@ -287,6 +347,8 @@ export async function createBankTransfer(
     reviewedBy: null,
     reviewedAt: null,
     reviewNote: null,
+    bankAccountId: chosen.id,
+    bankAccountLabel: chosen.label || chosen.bankName,
     createdAt: Date.now(),
   });
   await notify(db, userId, { type: "BANK_SUBMITTED", title: "Bank transfer submitted", body: `${publicId} is waiting for the operator to confirm the deposit.`, href: "/app/wallet" });
@@ -609,6 +671,7 @@ function presentTransfer(row: typeof bankTransfers.$inferSelect) {
     reviewedBy: row.reviewedBy,
     reviewedAt: row.reviewedAt ? new Date(row.reviewedAt).toISOString() : null,
     reviewNote: row.reviewNote,
+    bankAccountLabel: row.bankAccountLabel,
     createdAt: new Date(row.createdAt).toISOString(),
   };
 }

@@ -197,11 +197,13 @@ export function TransferRequestsPage() {
 const presets = ["50", "100", "200", "500"];
 const proofTypes = ["image/jpeg", "image/png", "image/webp"];
 
+type BankAccountOption = { id: string; label: string; bankName: string; accountHolder: string; accountNumber: string; swift: string; country: string; currency: string; instructions: string };
 type PayOptions = {
   stripe: boolean;
   cardTopup: boolean;
   bank: boolean;
-  bankDetails: { bankName: string; accountHolder: string; accountNumber: string; swift: string; country: string; currency: string; instructions: string } | null;
+  bankAccounts: BankAccountOption[];
+  bankDetails: BankAccountOption | null;
   minTopupFen: number;
   maxTopupFen: number;
 };
@@ -230,7 +232,7 @@ export function TopUpPage() {
   const value = Number(amount);
   const invalid = !/^\d+(\.\d{1,2})?$/.test(amount.trim()) || value <= 0;
   const configured: string[] = [
-    ...(options.data?.bank ? ["bank"] : []),
+    ...(options.data?.bankAccounts?.map((account) => `bank:${account.id}`) ?? []),
     ...(options.data?.cardTopup ? ["card"] : []),
   ];
   const ready = options.isSuccess;
@@ -251,6 +253,7 @@ export function TopUpPage() {
       body.set("amountFen", String(yuanToFen(amount)));
       body.set("reference", reference.trim());
       body.set("proofNote", proofNote.trim());
+      body.set("bankAccountId", bankDetails?.id ?? "");
       if (proof) body.set("proof", proof);
       return api<{ publicId: string }>("/api/wallet/bank-transfers", { method: "POST", body });
     },
@@ -279,7 +282,8 @@ export function TopUpPage() {
     setPreview(url);
   }
 
-  const bankDetails = options.data?.bankDetails;
+  const accounts = options.data?.bankAccounts ?? [];
+  const bankDetails = accounts.find((account) => selected === `bank:${account.id}`) ?? null;
   const remitText = bankDetails
     ? [
         bankDetails.bankName,
@@ -311,7 +315,7 @@ export function TopUpPage() {
             </div>
             <div>
               <div className="text-[11px] font-medium tracking-wide text-slate-400 uppercase">Transfer to</div>
-              <div className="mt-1 flex items-center gap-2 font-medium text-ink"><Landmark size={16} aria-hidden="true" /> {bankDetails.bankName}</div>
+              <div className="mt-1 flex items-center gap-2 font-medium text-ink"><Landmark size={16} aria-hidden="true" /> {bankDetails.label || bankDetails.bankName}</div>
             </div>
             <dl className="divide-y divide-slate-100 text-[13px]">
               <Detail label="Account holder" value={bankDetails.accountHolder} />
@@ -319,7 +323,7 @@ export function TopUpPage() {
               {bankDetails.swift ? <Detail label="SWIFT / BIC" value={bankDetails.swift} /> : null}
               <Detail label="Country" value={bankDetails.country} />
               <Detail label="Currency" value={bankDetails.currency} />
-              {bankDetails.instructions ? <Detail label="Instructions" value={bankDetails.instructions} /> : null}
+              {bankDetails.instructions ? <Detail label="Instructions" value={bankDetails.instructions} multiline /> : null}
             </dl>
           </Card>
           <Card>
@@ -420,24 +424,32 @@ export function TopUpPage() {
           <p className="mt-1 text-[13px] text-slate-500">Choose an amount first, then a method that is turned on for this account.</p>
           {options.isError ? <div className="mt-3"><Notice tone="danger">Could not load payment methods.</Notice></div> : null}
           {!ready && !options.isError ? <p className="mt-3 text-[13px] text-slate-500">Loading payment methods…</p> : null}
-          {options.data?.bank && bankDetails ? (
+          {accounts.length ? (
             <div className="mt-4">
               <div className="text-[11px] font-medium tracking-wide text-slate-400 uppercase">Bank transfer</div>
-              <button
-                type="button"
-                className={cn("mt-2 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left", selected === "bank" ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-100" : "border-slate-200 hover:border-slate-300")}
-                aria-pressed={selected === "bank"}
-                onClick={() => setMethod("bank")}
-              >
-                <span className="flex items-center gap-3">
-                  <Landmark size={18} className="text-slate-500" aria-hidden="true" />
-                  <span>
-                    <span className="block font-medium text-ink">{bankDetails.bankName}</span>
-                    <span className="block text-[12px] text-slate-500">{bankDetails.currency} · reviewed before credit</span>
-                  </span>
-                </span>
-                <ChevronRight size={16} className="text-slate-400" aria-hidden="true" />
-              </button>
+              <div className="mt-2 grid gap-2">
+                {accounts.map((account) => {
+                  const id = `bank:${account.id}`;
+                  return (
+                    <button
+                      key={account.id}
+                      type="button"
+                      className={cn("flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left", selected === id ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-100" : "border-slate-200 hover:border-slate-300")}
+                      aria-pressed={selected === id}
+                      onClick={() => setMethod(id)}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Landmark size={18} className="text-slate-500" aria-hidden="true" />
+                        <span>
+                          <span className="block font-medium text-ink">{account.label || account.bankName}</span>
+                          <span className="block text-[12px] text-slate-500">{account.bankName} · {account.currency} · reviewed before credit</span>
+                        </span>
+                      </span>
+                      <ChevronRight size={16} className="text-slate-400" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
           {options.data?.cardTopup ? (
@@ -463,7 +475,7 @@ export function TopUpPage() {
         {selected === "card" ? <Notice tone="info">Card checkout does not add funds until the payment is confirmed.</Notice> : null}
         {unavailable ? <Notice tone="warning">No top-up method is turned on yet. Contact support to add funds.</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
-        {selected === "bank" ? (
+        {selected.startsWith("bank:") ? (
           <Button className="w-full sm:w-auto" size="lg" disabled={!ready || invalid} onClick={() => { setError(""); if (!invalid) setStep("remit"); }}>
             Continue
           </Button>
@@ -478,11 +490,11 @@ export function TopUpPage() {
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
     <div className="grid gap-1 py-2.5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-3">
       <dt className="text-slate-500">{label}</dt>
-      <dd className="font-medium break-words text-ink">{value}</dd>
+      <dd className={multiline ? "font-medium break-words whitespace-pre-line text-ink" : "font-medium break-words text-ink"}>{value}</dd>
     </div>
   );
 }

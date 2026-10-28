@@ -43,6 +43,11 @@ export type WorkerBindings = {
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   CUSTOMER_AI_ENABLED?: string;
+  /**
+   * Cloudflare Email Sending binding. Required when SMTP host is smtp.mx.cloudflare.net,
+   * because Workers cannot open TCP connections to Cloudflare IP addresses.
+   */
+  EMAIL?: SendEmail;
 };
 
 async function nextMemberCode(db: Database): Promise<string> {

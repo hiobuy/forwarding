@@ -329,6 +329,22 @@ export const paymentSettings = sqliteTable("payment_settings", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+/** Receiving accounts shown when a customer pays by bank transfer. */
+export const bankAccounts = sqliteTable("bank_accounts", {
+  id: text("id").primaryKey(),
+  label: text("label"),
+  bankName: text("bank_name").notNull(),
+  accountHolder: text("account_holder").notNull(),
+  accountNumber: text("account_number").notNull(),
+  swift: text("swift"),
+  country: text("country"),
+  currency: text("currency").notNull().default("USD"),
+  instructions: text("instructions"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const payments = sqliteTable(
   "payments",
   {
@@ -374,6 +390,9 @@ export const bankTransfers = sqliteTable(
     reviewedBy: text("reviewed_by"),
     reviewedAt: integer("reviewed_at"),
     reviewNote: text("review_note"),
+    /** Receiving account the customer was shown. Null on transfers created before multiple accounts. */
+    bankAccountId: text("bank_account_id"),
+    bankAccountLabel: text("bank_account_label"),
     createdAt: integer("created_at").notNull(),
   },
   (table) => [uniqueIndex("bank_transfers_public").on(table.publicId)],

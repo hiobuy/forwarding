@@ -7,9 +7,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - An "Admin demo" entry in the customer sidebar while `DEMO_MODE` is on.
+- Several bank accounts can be saved for transfer top-up. The customer chooses which account to pay.
+- Mail to `smtp.mx.cloudflare.net` is sent with the Cloudflare Email Sending binding. Workers cannot open a TCP connection to a Cloudflare address.
 
 ### Changed
 
+- Bank transfer instructions keep the line breaks entered in the admin.
+- The test-email button reports success only after the message is accepted.
 - `DEMO_MODE` is no longer set in `wrangler.jsonc`, so a deployment can turn it on with `wrangler secret put DEMO_MODE`.
 - A failed Google sign-in or link now returns to the sign-in or Account page with a readable message instead of the raw Better Auth error page. For example, an email that already has a password account is told to sign in with the password first and then link Google under Account.
 - Demo mode now sends account emails (sign-up verification, password reset, and email change) so demo visitors can verify an email sign-up. Notification emails are still not sent.

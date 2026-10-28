@@ -458,7 +458,7 @@ app.post("/api/wallet/bank-transfers", async (c) => {
       c.get("db"),
       c.env.PHOTOS,
       c.get("user").id,
-      { amountFen, reference: text(form.reference, 80), transferDate: text(form.transferDate, 20), proofNote: text(form.proofNote, 500) },
+      { amountFen, reference: text(form.reference, 80), transferDate: text(form.transferDate, 20), proofNote: text(form.proofNote, 500), bankAccountId: text(form.bankAccountId, 80) },
       proof,
     ),
   );

@@ -8,12 +8,38 @@ import { emailMessages, emailRules, emailSettings, emailTemplates, notificationP
 import { AppError } from "../errors";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { sendSmtp, testSmtp, type SmtpConfig, type SmtpEncryption } from "./smtp";
+import { isCloudflareEmailHost } from "./smtp-reply";
 
 const TEST_LIMIT = 5;
 const TEST_WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 /** Without these a demo visitor could never verify, reset, or change an email. */
 const DEMO_ACCOUNT_EVENTS = ["email.verification", "email.change", "email.changed", "password.reset"];
+
+async function deliverMessage(config: SmtpConfig, env: MailEnv, message: { to: string; subject: string; html: string; text: string }) {
+  if (!isCloudflareEmailHost(config.host)) {
+    await sendSmtp(config, message);
+    return;
+  }
+  if (!env.EMAIL) {
+    throw new Error("Workers cannot open SMTP to smtp.mx.cloudflare.net. Cloudflare blocks TCP connections to its own addresses.");
+  }
+  const from = config.senderName ? { email: config.senderEmail, name: config.senderName } : config.senderEmail;
+  try {
+    await env.EMAIL.send({
+      to: message.to,
+      from,
+      subject: message.subject,
+      html: message.html,
+      ...(message.text ? { text: message.text } : {}),
+      ...(config.replyTo ? { replyTo: config.replyTo } : {}),
+    });
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+    const detail = error instanceof Error ? error.message : "Email sending failed.";
+    throw new Error(code ? `${code}: ${detail}` : detail);
+  }
+}
 
 type MailEnv = {
   BETTER_AUTH_SECRET: string;
@@ -27,6 +53,7 @@ type MailEnv = {
   SMTP_REPLY_TO?: string;
   APP_URL?: string;
   DEMO_MODE?: string;
+  EMAIL?: SendEmail;
 };
 
 export async function emailDeliveryConfigured(db: Database, env: MailEnv) {
@@ -97,6 +124,12 @@ export async function saveSmtpSettings(
 
 export async function checkSmtp(db: Database, env: MailEnv) {
   const config = await requireSmtp(db, env);
+  if (isCloudflareEmailHost(config.host)) {
+    if (!env.EMAIL) {
+      throw new AppError("UPSTREAM_ERROR", "Workers cannot open SMTP to smtp.mx.cloudflare.net. Cloudflare blocks TCP connections to its own addresses. Add an EMAIL binding.", 502);
+    }
+    return { ok: true as const };
+  }
   try {
     await testSmtp(config);
   } catch (error) {
@@ -115,8 +148,9 @@ export async function sendTestEmail(db: Database, env: MailEnv, to: string) {
     vars: {},
     ...brand,
   });
+  const idempotencyKey = `admin.test:${crypto.randomUUID()}`;
   await enqueue(db, {
-    idempotencyKey: `admin.test:${crypto.randomUUID()}`,
+    idempotencyKey,
     to,
     event: "admin.test",
     templateId: "welcome",
@@ -125,6 +159,10 @@ export async function sendTestEmail(db: Database, env: MailEnv, to: string) {
     required: true,
   });
   await deliverQueued(db, env, config);
+  const row = (await db.select({ status: emailMessages.status, lastError: emailMessages.lastError }).from(emailMessages).where(eq(emailMessages.idempotencyKey, idempotencyKey)))[0];
+  if (row?.status !== "sent") {
+    throw new AppError("UPSTREAM_ERROR", row?.lastError || "The mail server did not accept the message.", 502);
+  }
   return { ok: true as const };
 }
 
@@ -349,7 +387,7 @@ async function deliverQueued(db: Database, env: MailEnv, config: SmtpConfig) {
       .returning({ id: emailMessages.id });
     if (!claimed.length || !row.payload) continue;
     try {
-      await sendSmtp(config, { to: row.toAddress, subject: row.subject, html: row.payload, text: "" });
+      await deliverMessage(config, env, { to: row.toAddress, subject: row.subject, html: row.payload, text: "" });
       await db.update(emailMessages).set({ status: "sent", sentAt: Date.now(), lastError: null, payload: null }).where(eq(emailMessages.id, row.id));
     } catch (error) {
       const message = (error instanceof Error ? error.message : "Send failed.").slice(0, 300);

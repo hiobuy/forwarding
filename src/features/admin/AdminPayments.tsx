@@ -8,6 +8,18 @@ import { ApiError, api } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { AdminHeader, ListEmpty, ListFrame, Panel, RowsSkeleton, TableShell, filterControl, useAdminAction, useDemoPreview, type AdminOverview } from "./shared";
 
+type BankAccountForm = {
+  id: string;
+  label: string;
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  swift: string;
+  country: string;
+  currency: string;
+  instructions: string;
+};
+
 type PaymentSettings = {
   stripeEnabled: boolean;
   stripeMode: "test" | "live";
@@ -19,15 +31,13 @@ type PaymentSettings = {
   maxTopupFen: number;
   dailyTopupFen: number;
   bankEnabled: boolean;
-  bankName: string;
-  accountHolder: string;
-  accountNumber: string;
-  swift: string;
-  bankCountry: string;
-  bankCurrency: string;
-  bankInstructions: string;
+  bankAccounts: BankAccountForm[];
   status: { stripe: string; bank: string; cardTopup: string };
 };
+
+function emptyBankAccount(): BankAccountForm {
+  return { id: crypto.randomUUID(), label: "", bankName: "", accountHolder: "", accountNumber: "", swift: "", country: "", currency: "USD", instructions: "" };
+}
 
 type PaymentRow = {
   id: string;
@@ -74,9 +84,12 @@ function PaymentForm({ initial }: { initial: PaymentSettings }) {
   const demo = useDemoPreview();
   const queryClient = useQueryClient();
   const toast = useToast();
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState({ ...initial, bankAccounts: initial.bankAccounts.length ? initial.bankAccounts : [emptyBankAccount()] });
   const [secretKey, setSecretKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  function updateBankAccount(id: string, patch: Partial<BankAccountForm>) {
+    setForm((current) => ({ ...current, bankAccounts: current.bankAccounts.map((account) => (account.id === id ? { ...account, ...patch } : account)) }));
+  }
   const save = useMutation({
     mutationFn: () =>
       api<PaymentSettings>("/api/admin/payments/settings", {
@@ -93,7 +106,7 @@ function PaymentForm({ initial }: { initial: PaymentSettings }) {
     onSuccess: async (next) => {
       setSecretKey("");
       setWebhookSecret("");
-      setForm(next);
+      setForm({ ...next, bankAccounts: next.bankAccounts.length ? next.bankAccounts : [emptyBankAccount()] });
       await queryClient.invalidateQueries({ queryKey: ["admin", "payment-settings"] });
       toast({ title: "Payment settings saved.", tone: "success" });
     },
@@ -158,34 +171,62 @@ function PaymentForm({ initial }: { initial: PaymentSettings }) {
       </Panel>
       <Panel>
         <div className="space-y-4 p-4">
-          <h2 className="text-[13px] font-medium text-ink">Bank transfer</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[13px] font-medium text-ink">Bank transfer</h2>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={form.bankAccounts.length >= 10}
+              onClick={() => setForm({ ...form, bankAccounts: [...form.bankAccounts, emptyBankAccount()] })}
+            >
+              Add bank account
+            </Button>
+          </div>
           <label className="flex items-center gap-2 text-[13px]">
             <input type="checkbox" checked={form.bankEnabled} onChange={(event) => setForm({ ...form, bankEnabled: event.target.checked })} />
             Enable bank transfer top-up
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Bank name">
-              <input className={inputClass} value={form.bankName} onChange={(event) => setForm({ ...form, bankName: event.target.value })} />
-            </Field>
-            <Field label="Account holder">
-              <input className={inputClass} value={form.accountHolder} onChange={(event) => setForm({ ...form, accountHolder: event.target.value })} />
-            </Field>
-            <Field label="Account number / IBAN">
-              <input className={inputClass} value={form.accountNumber} onChange={(event) => setForm({ ...form, accountNumber: event.target.value })} />
-            </Field>
-            <Field label="SWIFT / BIC">
-              <input className={inputClass} value={form.swift} onChange={(event) => setForm({ ...form, swift: event.target.value })} />
-            </Field>
-            <Field label="Bank country">
-              <input className={inputClass} value={form.bankCountry} onChange={(event) => setForm({ ...form, bankCountry: event.target.value })} />
-            </Field>
-            <Field label="Currency">
-              <input className={inputClass} value="USD" readOnly />
-            </Field>
-          </div>
-          <Field label="Payment instructions">
-            <textarea className={cn(inputClass, "min-h-24 py-2")} value={form.bankInstructions} onChange={(event) => setForm({ ...form, bankInstructions: event.target.value })} />
-          </Field>
+          <p className="text-[13px] leading-5 text-slate-500">Customers choose one of these accounts when they top up. Leave a card blank if you are not using it.</p>
+          {form.bankAccounts.map((account, index) => (
+            <div key={account.id} className="space-y-3 rounded-xl border border-slate-200 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[13px] font-medium text-ink">Account {index + 1}</div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setForm({ ...form, bankAccounts: form.bankAccounts.filter((item) => item.id !== account.id) })}
+                >
+                  Remove
+                </Button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Label" hint="Shown when the customer picks an account. Optional.">
+                  <input className={inputClass} value={account.label} onChange={(event) => updateBankAccount(account.id, { label: event.target.value })} />
+                </Field>
+                <Field label="Bank name">
+                  <input className={inputClass} value={account.bankName} onChange={(event) => updateBankAccount(account.id, { bankName: event.target.value })} />
+                </Field>
+                <Field label="Account holder">
+                  <input className={inputClass} value={account.accountHolder} onChange={(event) => updateBankAccount(account.id, { accountHolder: event.target.value })} />
+                </Field>
+                <Field label="Account number / IBAN">
+                  <input className={inputClass} value={account.accountNumber} onChange={(event) => updateBankAccount(account.id, { accountNumber: event.target.value })} />
+                </Field>
+                <Field label="SWIFT / BIC">
+                  <input className={inputClass} value={account.swift} onChange={(event) => updateBankAccount(account.id, { swift: event.target.value })} />
+                </Field>
+                <Field label="Bank country">
+                  <input className={inputClass} value={account.country} onChange={(event) => updateBankAccount(account.id, { country: event.target.value })} />
+                </Field>
+                <Field label="Currency">
+                  <input className={inputClass} value={account.currency} onChange={(event) => updateBankAccount(account.id, { currency: event.target.value })} />
+                </Field>
+              </div>
+              <Field label="Payment instructions">
+                <textarea className={cn(inputClass, "min-h-24 py-2")} value={account.instructions} onChange={(event) => updateBankAccount(account.id, { instructions: event.target.value })} />
+              </Field>
+            </div>
+          ))}
         </div>
       </Panel>
       <Button type="submit" loading={save.isPending} disabled={demo}>
