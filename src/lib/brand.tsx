@@ -11,6 +11,7 @@ const emptyStored: StoredBusiness = {
   email: "",
   supportEmail: "",
   phone: "",
+  whatsapp: "",
   country: "",
   address: "",
   description: "",

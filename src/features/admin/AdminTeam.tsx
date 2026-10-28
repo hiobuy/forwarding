@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import QRCode from "qrcode";
 import { useState } from "react";
 import { STAFF_ROLES, type StaffRole } from "../../domain/staff";
 import { formatDateTime } from "../../domain/dates";
@@ -225,7 +226,7 @@ function MfaCard({ enabled, required }: { enabled: boolean; required: boolean })
   const queryClient = useQueryClient();
   const toast = useToast();
   const [password, setPassword] = useState("");
-  const [setup, setSetup] = useState<{ secret: string; backupCodes: string[] } | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; qr: string; backupCodes: string[] } | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
@@ -236,8 +237,14 @@ function MfaCard({ enabled, required }: { enabled: boolean; required: boolean })
       setError(result.error?.message ?? "Could not start authenticator setup.");
       return;
     }
-    const secret = new URL(result.data.totpURI).searchParams.get("secret") ?? result.data.totpURI;
-    setSetup({ secret, backupCodes: result.data.backupCodes });
+    let secret = result.data.totpURI;
+    try {
+      secret = new URL(result.data.totpURI).searchParams.get("secret") || secret;
+    } catch {
+      secret = result.data.totpURI;
+    }
+    const qr = await QRCode.toDataURL(result.data.totpURI, { margin: 1, width: 192, errorCorrectionLevel: "M" });
+    setSetup({ secret, qr, backupCodes: result.data.backupCodes });
   }
 
   async function confirm() {
@@ -285,9 +292,10 @@ function MfaCard({ enabled, required }: { enabled: boolean; required: boolean })
       </div>
       {error ? <p className="mt-2 text-[13px] text-red-700">{error}</p> : null}
       {setup ? (
-        <div className="mt-3 space-y-2 text-[13px]">
-          <p>Add this key in your authenticator app, then enter the 6-digit code.</p>
-          <input className={inputClass} readOnly value={setup.secret} onFocus={(event) => event.currentTarget.select()} />
+        <div className="mt-3 space-y-3 text-[13px]">
+          <p>Scan this QR code with your authenticator app, or enter the key manually. Then enter the 6-digit code.</p>
+          <img src={setup.qr} alt="QR code for your authenticator app" width={192} height={192} className="rounded-lg border border-slate-200 bg-white p-2" />
+          <input className={inputClass} readOnly value={setup.secret} aria-label="Authenticator setup key" onFocus={(event) => event.currentTarget.select()} />
           {setup.backupCodes.length ? <p className="text-slate-600">Backup codes: {setup.backupCodes.join(" ")}</p> : null}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <Field label="Code">

@@ -9,6 +9,7 @@ import {
   resolveBusiness,
   trustedAppOrigin,
   validateBusinessInput,
+  whatsappLink,
   type StoredBusiness,
 } from "./business";
 
@@ -18,6 +19,7 @@ const stored: StoredBusiness = {
   email: "",
   supportEmail: "",
   phone: "",
+  whatsapp: "",
   country: "",
   address: "",
   description: "",
@@ -36,6 +38,20 @@ const stored: StoredBusiness = {
 };
 
 describe("business settings", () => {
+  it("turns a WhatsApp number into a contact link and hides an empty one", () => {
+    expect(whatsappLink("")).toBe("");
+    expect(whatsappLink("+86 138 0000 0000")).toBe("https://wa.me/8613800000000");
+    expect(whatsappLink("https://wa.me/15550100")).toBe("https://wa.me/15550100");
+    expect(whatsappLink("https://api.whatsapp.com/send?phone=15550100")).toBe("https://wa.me/15550100");
+    expect(whatsappLink("not a number")).toBe("");
+    expect(whatsappLink("123")).toBe("");
+    const saved = validateBusinessInput(sample({ whatsapp: "+1 (555) 010-0199" }));
+    expect("value" in saved && saved.value.whatsapp).toBe("15550100199");
+    expect(resolveBusiness({ ...stored, whatsapp: "8613800000000" }).whatsappUrl).toBe("https://wa.me/8613800000000");
+    expect(resolveBusiness(stored).whatsappUrl).toBe("");
+    expect(validateBusinessInput(sample({ whatsapp: "call me" }))).toEqual({ error: "Enter a WhatsApp number with the country code, or leave it empty." });
+  });
+
   it("uses the open-source name until an operator or environment value exists", () => {
     expect(resolveBusiness(stored).name).toBe("HIOBuy Forwarding");
     expect(resolveBusiness(stored, { BUSINESS_NAME: "Northwind Forwarding" }).name).toBe("Northwind Forwarding");
@@ -113,6 +129,7 @@ function sample(overrides: Partial<Parameters<typeof validateBusinessInput>[0]> 
     email: "hello@example.com",
     supportEmail: "",
     phone: "",
+    whatsapp: "",
     country: "",
     address: "",
     description: "",

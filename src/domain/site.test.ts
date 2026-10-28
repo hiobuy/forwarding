@@ -24,6 +24,7 @@ const stored: StoredBusiness = {
   email: "",
   supportEmail: "",
   phone: "",
+  whatsapp: "",
   country: "",
   address: "",
   description: "",

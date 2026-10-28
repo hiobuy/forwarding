@@ -359,6 +359,7 @@ const businessSchema = z.object({
   email: z.string().max(120),
   supportEmail: z.string().max(120).optional().default(""),
   phone: z.string().max(40).optional().default(""),
+  whatsapp: z.string().max(80).optional().default(""),
   country: z.string().max(80).optional().default(""),
   address: z.string().max(400).optional().default(""),
   description: z.string().max(400).optional().default(""),

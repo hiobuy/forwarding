@@ -1018,6 +1018,7 @@ export function demoBusiness() {
     email: "hello@example.com",
     supportEmail: "support@example.com",
     phone: "+1 555 0100",
+    whatsapp: "15550100",
     country: "United States",
     address: "100 Sample Avenue, Austin, TX 78701",
     description: "Fictional company profile used only in Demo Admin.",

@@ -8,6 +8,7 @@ export const OPEN_SOURCE_BRAND = {
   email: "",
   supportEmail: "",
   phone: "",
+  whatsapp: "",
   country: "",
   address: "",
   description: "",
@@ -31,6 +32,7 @@ export type StoredBusiness = {
   email: string;
   supportEmail: string;
   phone: string;
+  whatsapp: string;
   country: string;
   address: string;
   description: string;
@@ -54,6 +56,7 @@ export type PublicBrand = {
   email: string;
   supportEmail: string;
   phone: string;
+  whatsappUrl: string;
   country: string;
   address: string;
   description: string;
@@ -85,6 +88,7 @@ export type BusinessInput = {
   email: string;
   supportEmail: string;
   phone: string;
+  whatsapp: string;
   country: string;
   address: string;
   description: string;
@@ -120,6 +124,34 @@ const LOGO_BYTES: Record<LogoKind, number> = {
 
 export function isLogoKind(value: string): value is LogoKind {
   return (LOGO_KINDS as readonly string[]).includes(value);
+}
+
+export function whatsappLink(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  let digits = "";
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      const host = url.hostname.replace(/^www\./, "");
+      if (host !== "wa.me" && host !== "api.whatsapp.com") return "";
+      const fromPath = url.pathname.split("/").filter(Boolean)[0] ?? "";
+      digits = (url.searchParams.get("phone") || fromPath).replace(/\D/g, "");
+    } catch {
+      return "";
+    }
+  } else if (/[^\d+\s().-]/.test(trimmed)) {
+    return "";
+  } else {
+    digits = trimmed.replace(/\D/g, "");
+  }
+  if (digits.length < 8 || digits.length > 15) return "";
+  return `https://wa.me/${digits}`;
+}
+
+export function whatsappNumber(value: string): string {
+  const link = whatsappLink(value);
+  return link ? link.slice("https://wa.me/".length) : "";
 }
 
 export function plainText(value: string, max: number) {
@@ -185,6 +217,7 @@ export function resolveBusiness(stored: StoredBusiness, env: BusinessEnv = {}): 
     email,
     supportEmail: stored.supportEmail,
     phone: stored.phone,
+    whatsappUrl: whatsappLink(stored.whatsapp),
     country: stored.country,
     address: stored.address,
     description: stored.description,
@@ -217,6 +250,8 @@ export function validateBusinessInput(input: BusinessInput): { value: BusinessIn
   const email = input.email.trim().toLowerCase();
   if (!name) return { error: "Enter a business name." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > LIMITS.email) return { error: "Enter a business email." };
+  const whatsapp = whatsappNumber(input.whatsapp);
+  if (input.whatsapp.trim() && !whatsapp) return { error: "Enter a WhatsApp number with the country code, or leave it empty." };
   const supportEmail = input.supportEmail.trim().toLowerCase();
   if (supportEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supportEmail) || supportEmail.length > LIMITS.email)) return { error: "Enter a valid support email." };
   const primaryColor = hexColor(input.primaryColor);
@@ -239,6 +274,7 @@ export function validateBusinessInput(input: BusinessInput): { value: BusinessIn
       email,
       supportEmail,
       phone: plainText(input.phone, LIMITS.phone),
+      whatsapp,
       country: plainText(input.country, LIMITS.country),
       address: plainText(input.address, LIMITS.address),
       description: plainText(input.description, LIMITS.description),
@@ -262,6 +298,7 @@ export function changedBusinessFields(previous: BusinessInput, next: BusinessInp
     email: "Business email",
     supportEmail: "Support email",
     phone: "Support phone",
+    whatsapp: "WhatsApp",
     country: "Country",
     address: "Address",
     description: "Description",

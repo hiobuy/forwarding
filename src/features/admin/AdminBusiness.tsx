@@ -88,6 +88,9 @@ function BusinessForm({ initial, canWrite, active, onDirty }: { initial: View; c
           <Field label="Support phone" optional>
             <input className={inputClass} disabled={!canWrite} value={form.phone} onChange={(event) => set("phone", event.target.value)} />
           </Field>
+          <Field label="WhatsApp" optional hint="Country code and number, for example +86 138 0000 0000. An icon appears next to the language switch in the customer app.">
+            <input className={inputClass} inputMode="tel" autoComplete="tel" disabled={!canWrite} value={form.whatsapp} placeholder="+86 138 0000 0000" onChange={(event) => set("whatsapp", event.target.value)} />
+          </Field>
           <Field label="Country / region" optional>
             <input className={inputClass} disabled={!canWrite} value={form.country} onChange={(event) => set("country", event.target.value)} />
           </Field>

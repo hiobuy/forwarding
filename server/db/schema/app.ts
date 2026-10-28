@@ -837,6 +837,7 @@ export const businessSettings = sqliteTable("business_settings", {
   email: text("email").notNull().default(""),
   supportEmail: text("support_email").notNull().default(""),
   phone: text("phone").notNull().default(""),
+  whatsapp: text("whatsapp").notNull().default(""),
   country: text("country").notNull().default(""),
   address: text("address").notNull().default(""),
   description: text("description").notNull().default(""),

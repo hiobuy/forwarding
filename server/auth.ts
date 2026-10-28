@@ -8,6 +8,7 @@ import type { Database } from "./db/client";
 import { authSchema, session } from "./db/schema";
 import { createEmailService } from "./services/email";
 import { ensureAccountRows } from "./account";
+import { emailBrand } from "./business";
 import { enqueueSecurityEmail } from "./email/mailer";
 import { allocateNumber } from "./numbering";
 import { assertTurnstile, googleCredentials, hiobuyPay2faRequired } from "./platform";
@@ -65,6 +66,8 @@ export async function createAuth(env: WorkerBindings, db: Database, request: Req
     }
   };
   const google = await googleCredentials(db, env);
+  const brand = await emailBrand(db, env).catch(() => null);
+  const issuer = brand?.platformName?.replace(/[:]/g, " ").trim() || "HIOBuy";
   return betterAuth({
     appName: "HIOBuy Forwarding",
     baseURL: origin,
@@ -112,7 +115,7 @@ export async function createAuth(env: WorkerBindings, db: Database, request: Req
         status: { type: "string", required: false, input: false, defaultValue: "active" },
       },
     },
-    plugins: [twoFactor({ issuer: "HIOBuy" })],
+    plugins: [twoFactor({ issuer })],
     rateLimit: {
       enabled: true,
       storage: "database",
